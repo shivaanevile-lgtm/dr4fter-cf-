@@ -1,0 +1,3265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Dr4fter</title>
+<style>
+  :root{
+    --cream:#F5EFE3;
+    --cream-dark:#EAE1CE;
+    --rust:#C1543C;
+    --rust-dark:#a3402c;
+    --ink:#2B2620;
+    --ink-soft:#6b6255;
+    --line:#d9cfba;
+    --green:#4c7a5a;
+    --gold:#c99a3f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  /* Without this iOS keeps double-tap-to-zoom on tappable elements and adds a
+     ~300ms delay before click fires — rapid taps zoom instead of registering. */
+  button, .btn, .theme-chip, .pick-row, .item-row, .footer-note, .lot-card{ touch-action: manipulation; }
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Helvetica Neue',Arial,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.serif{ font-family:Georgia,'Times New Roman',serif; }
+  .mono{ font-family:'SF Mono',Menlo,Consolas,monospace; }
+  #app{ max-width:520px; margin:0 auto; min-height:100vh; padding:18px 16px 40px; position:relative; }
+  .screen{ display:none; animation:fadein .25s ease; }
+  .screen.active{ display:block; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  #stats-overlay{ position:fixed; inset:0; background:rgba(20,18,15,0.55); z-index:1500;
+    display:flex; align-items:center; justify-content:center; padding:18px; overflow-y:auto; }
+  #stats-card{ background:var(--cream); border:2px solid var(--ink); border-radius:14px;
+    padding:20px 18px; max-width:440px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,.3); }
+  .stat-row{ display:flex; justify-content:space-between; font-size:13.5px; padding:7px 0; border-bottom:1px solid var(--line); }
+  .stat-big{ font-family:'SF Mono',monospace; font-size:30px; color:var(--rust); text-align:center; margin:6px 0 2px; }
+  .stat-sub{ text-align:center; font-size:12px; color:var(--ink-soft); margin-bottom:12px; }
+  #howto-overlay{ position:fixed; inset:0; background:rgba(20,18,15,0.55); z-index:1500;
+    display:flex; align-items:center; justify-content:center; padding:18px; overflow-y:auto; }
+  #howto-card{ background:var(--cream); border:2px solid var(--ink); border-radius:14px;
+    padding:20px 18px; max-width:440px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,.3); }
+  .howto-step{ font-size:13.5px; line-height:1.5; padding:7px 0; border-bottom:1px solid var(--line); }
+  .howto-step:last-of-type{ border-bottom:none; margin-bottom:6px; }
+  .masthead{ text-align:center; margin-bottom:18px; padding-bottom:14px; border-bottom:3px double var(--ink); }
+  .masthead h1{ font-size:30px; margin:0 0 2px; letter-spacing:.2px; }
+  .masthead .four{ color:var(--rust); }
+  .masthead p{ margin:4px 0 0; color:var(--ink-soft); font-size:13px; }
+
+  .card{ background:#fffdf8; border:1px solid var(--line); border-radius:10px; padding:14px; margin-bottom:12px; box-shadow:0 1px 0 rgba(0,0,0,.03); }
+  .section-label{ font-size:12px; color:var(--ink-soft); margin:18px 0 8px; font-family:Georgia,serif; font-style:italic; }
+
+  .theme-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .theme-chip{
+    background:#fffdf8; border:1px solid var(--line); border-radius:10px;
+    padding:14px 10px; text-align:center; cursor:pointer; transition:transform .1s, border-color .15s;
+  }
+  .theme-chip:active{ transform:scale(.96); }
+  .theme-chip.selected{ border-color:var(--rust); background:#fdf1ec; }
+  .theme-chip .emoji{ font-size:28px; display:block; margin-bottom:6px; }
+  .theme-chip .name{ font-size:13.5px; font-weight:600; }
+  .opp-row{ display:flex; align-items:center; gap:10px; background:#fffdf8; border:1px solid var(--line);
+    border-radius:10px; padding:9px 11px; margin-bottom:6px; cursor:pointer; }
+  .opp-row.picked{ border-color:var(--rust); background:#fdf1ec; }
+  .opp-emoji{ font-size:19px; }
+  .opp-text{ flex:1; display:flex; flex-direction:column; line-height:1.25; }
+  .opp-tag{ font-size:11px; color:var(--ink-soft); }
+  .theme-chip .lvl{ display:block; font-size:9.5px; margin-top:4px; letter-spacing:.3px;
+    text-transform:uppercase; opacity:.85; }
+  .lvl-easy{ color:var(--green); }
+  .lvl-medium{ color:var(--gold); }
+  .lvl-deep{ color:var(--rust); }
+
+  input[type=text]{
+    width:100%; padding:12px 12px; font-size:16px; border:1px solid var(--line); border-radius:8px;
+    background:#fffdf8; color:var(--ink); font-family:inherit;
+  }
+  input[type=text]:focus{ outline:2px solid var(--rust); outline-offset:1px; }
+
+  .btn{
+    display:block; width:100%; text-align:center; padding:14px; border-radius:8px; border:none;
+    font-size:16px; font-weight:700; cursor:pointer; margin-top:10px; font-family:inherit;
+  }
+  .btn-primary{ background:var(--rust); color:#fff; }
+  .btn-primary:active{ background:var(--rust-dark); }
+  .btn-secondary{ background:transparent; color:var(--ink); border:1.5px solid var(--ink); }
+  .btn-ghost{ background:transparent; color:var(--ink-soft); border:none; text-decoration:underline; padding:8px; }
+  .btn:disabled{ opacity:.4; }
+  .btn-row{ display:flex; gap:10px; }
+  .btn-row .btn{ flex:1; }
+
+  .badge{ display:inline-block; background:var(--cream-dark); color:var(--ink-soft); font-size:11px; padding:3px 8px; border-radius:20px; margin-left:6px; }
+  #qr-wrap{ margin:12px 0 4px; display:flex; flex-direction:column; align-items:center; }
+  #qr-box{ background:#fff; padding:10px; border-radius:10px; border:1px solid var(--line); line-height:0; }
+  #qr-caption{ font-size:11.5px; color:var(--ink-soft); margin-top:7px; }
+  .room-code{ font-family:'SF Mono',monospace; font-size:26px; letter-spacing:6px; text-align:center; padding:14px; background:var(--cream-dark); border-radius:8px; margin:10px 0; }
+
+  /* Item-won toast — shown for every lot resolution, styled by price tier */
+  .free-toast{
+    position:fixed; top:32%; left:50%; transform:translate(-50%,-50%) scale(0.85);
+    padding:16px 24px; border-radius:16px;
+    font-family:Georgia,serif; font-weight:700; font-size:19px; text-align:center;
+    box-shadow:0 10px 34px rgba(0,0,0,.24); z-index:1000; opacity:0; pointer-events:none;
+    max-width:86vw;
+  }
+  .free-toast .sub{ display:block; font-family:'Helvetica Neue',sans-serif; font-size:13px; font-weight:600; margin-top:5px; }
+  .free-toast.variant-free{ background:var(--gold); color:var(--ink); font-size:22px; }
+  .free-toast.variant-steal{ background:var(--rust); color:#fff; }
+  .free-toast.variant-sold{ background:#fffdf8; color:var(--ink); border:2px solid var(--ink); }
+  .free-toast.variant-joined{ background:var(--green); color:#fff; font-size:19px; }
+  .free-toast.show.variant-joined{ animation: softPop 1.5s ease forwards; }
+  .free-toast.show.variant-free,
+  .free-toast.show.variant-steal{ animation: bigPop 1.7s ease forwards; }
+  .free-toast.show.variant-sold{ animation: softPop 1.25s ease forwards; }
+  @keyframes bigPop{
+    0%{ opacity:0; transform:translate(-50%,-50%) scale(0.4) rotate(-6deg); }
+    14%{ opacity:1; transform:translate(-50%,-50%) scale(1.1) rotate(2deg); }
+    24%{ transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+    82%{ opacity:1; transform:translate(-50%,-50%) scale(1) rotate(0deg); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(0.92) rotate(0deg); }
+  }
+  @keyframes softPop{
+    0%{ opacity:0; transform:translate(-50%,-50%) scale(0.85); }
+    18%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    78%{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+    100%{ opacity:0; transform:translate(-50%,-50%) scale(0.96); }
+  }
+
+  /* Draft screen */
+  .stall-row{ margin-bottom:6px; }
+
+  .lot-card{ background:#fffdf8; border:2px solid var(--ink); border-radius:12px; padding:20px 16px; text-align:center; margin-bottom:14px; }
+  .lot-card .cat{ font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--ink-soft); margin-bottom:6px; }
+  .lot-card .name{ font-family:Georgia,serif; font-size:22px; font-weight:700; line-height:1.25; }
+  .lot-card .stars{ color:var(--gold); font-size:13px; margin-top:6px; }
+  .bid-display{ font-family:'SF Mono',monospace; font-size:38px; text-align:center; margin:12px 0 4px; color:var(--rust); }
+  .bid-display .by{ display:block; font-family:'Helvetica Neue',sans-serif; font-size:12px; color:var(--ink-soft); margin-top:2px; }
+
+  .ticker{ background:var(--cream-dark); border-radius:8px; padding:8px 10px; font-family:'SF Mono',monospace; font-size:12px; color:var(--ink-soft); margin-bottom:12px; white-space:nowrap; overflow-x:auto; }
+
+  .bid-amount-input{ display:block; width:100%; padding:16px; font-size:26px; text-align:center; border:1px solid var(--line); border-radius:10px; background:#fffdf8; color:var(--ink); font-family:'SF Mono',monospace; margin-top:6px; }
+  .bid-amount-input:focus{ outline:2px solid var(--rust); outline-offset:1px; }
+  .btn-raise{ background:var(--rust); color:#fff; border:none; }
+  .btn-raise:active{ background:var(--rust-dark); }
+  .btn-skip{ background:transparent; color:var(--rust); border:1.5px solid var(--rust); }
+  .btn-skip:active{ background:#fdf1ec; }
+  #host-pick-panel{ margin-top:4px; }
+  .pick-row{ display:flex; justify-content:space-between; align-items:center; gap:10px;
+    background:#fffdf8; border:1px solid var(--line); border-radius:10px;
+    padding:11px 13px; margin-bottom:7px; cursor:pointer; }
+  .pick-row:active{ background:var(--cream-dark); }
+  .pick-row .pname{ font-size:14.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pick-row .pid{ font-family:'SF Mono',monospace; font-size:11px; color:var(--ink-soft); margin-right:8px; }
+  .pick-row .prate{ font-family:'SF Mono',monospace; font-size:13px; color:var(--gold); white-space:nowrap; }
+  .pick-count{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; font-style:italic; }
+  #team-consensus-banner{ background:#fdf1ec; border:1.5px solid var(--rust); border-radius:10px; padding:11px 13px; margin-bottom:10px; text-align:center; }
+  #consensus-text{ font-size:13.5px; color:var(--ink); }
+  .bid-caption{ text-align:center; font-size:13px; color:var(--ink-soft); font-style:italic; margin-top:10px; }
+
+  .status-line{ text-align:center; font-size:13px; color:var(--ink-soft); margin:10px 0; min-height:18px; }
+  .waiting-note{ text-align:center; font-size:14px; color:var(--ink-soft); padding:20px; }
+
+  /* Football pitch */
+  .pitch-wrap{ display:flex; gap:10px; }
+  .pitch-col{ flex:1; text-align:center; }
+  svg.pitch{ width:100%; height:auto; }
+
+  /* Results */
+  #results-card{ background:#fffdf8; border:2px solid var(--ink); border-radius:12px; padding:18px; }
+  #results-card h2{ text-align:center; margin:0 0 4px; font-size:24px; }
+  #results-card .subhead{ text-align:center; color:var(--ink-soft); font-size:13px; margin-bottom:14px; }
+  .flavor::before{ content:'✎ '; }
+
+  /* Confetti */
+  .confetti-piece{ position:fixed; top:-10px; width:8px; height:14px; opacity:.9; pointer-events:none; z-index:999; border-radius:2px; }
+
+  .footer-note{ text-align:center; font-size:11px; color:var(--ink-soft); margin-top:24px; }
+
+  /* On-page debug console — tap the footer 5x to open. Phone-only debugging,
+     since there's no server log for a static file the way there is for functions. */
+  #debug-panel{
+    position:fixed; left:0; right:0; bottom:0; max-height:55vh; overflow-y:auto;
+    background:#161512; color:#8fe08f; font-family:'SF Mono',Menlo,monospace; font-size:11.5px;
+    padding:10px 12px 16px; z-index:2000; border-top:2px solid var(--rust);
+  }
+  .debug-panel-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:#fff; font-family:'Helvetica Neue',sans-serif; }
+  .debug-panel-head button{ background:#2a2a26; color:#fff; border:1px solid #444; border-radius:6px; padding:5px 9px; font-size:11px; margin-left:6px; }
+  #debug-log-content{ white-space:pre-wrap; word-break:break-word; line-height:1.5; }
+  .debug-cmd-row{ display:flex; gap:6px; margin-top:10px; }
+  .debug-cmd-row input{ flex:1; min-width:0; background:#2a2a26; border:1px solid #444; border-radius:6px; color:#8fe08f; font-family:'SF Mono',Menlo,monospace; font-size:16px; padding:8px; }
+  .debug-cmd-row button{ background:var(--rust); color:#fff; border:none; border-radius:6px; padding:8px 14px; font-family:'Helvetica Neue',sans-serif; font-weight:700; font-size:12px; }
+  .debug-entry{ border-bottom:1px solid #333; padding:6px 0; }
+  .debug-entry .ts{ color:#777; }
+  .center{ text-align:center; }
+  .hidden{ display:none !important; }
+
+  /* Player cards (draft + results) — stacked, gradient budget meter */
+  .player-card{ background:#fffdf8; border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; transition:border-color .2s; }
+  .player-card.leading{ border-color:var(--rust); }
+  .player-card .prow{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .player-card .pname{ font-weight:700; font-size:15.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .player-card .pname .turn-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--green); margin-right:6px; vertical-align:middle; }
+  .player-card .pbudget{ font-family:'SF Mono',monospace; font-size:19px; color:var(--rust); white-space:nowrap; }
+  .player-card .psub{ font-size:11.5px; color:var(--ink-soft); margin-top:1px; }
+  .budget-track{ height:6px; border-radius:4px; background:var(--cream-dark); margin:10px 0 8px; overflow:hidden; }
+  .budget-fill{ height:100%; border-radius:4px; background:linear-gradient(90deg,#C1543C,#c99a3f,#4c7a5a); transition:width .35s ease; }
+  .player-card .item-row{ display:flex; justify-content:space-between; align-items:baseline; font-size:13px; padding:6px 0; border-bottom:1px solid var(--line); gap:8px; }
+  .player-card .item-row:last-child{ border-bottom:none; }
+  .player-card .item-row .iname{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .player-card .item-row .iprice{ font-family:'SF Mono',monospace; color:var(--ink-soft); white-space:nowrap; }
+  .player-card .empty-note{ color:var(--ink-soft); font-style:italic; font-size:13px; padding:4px 0 2px; }
+
+  /* Judgment card (results) */
+  #visual-stage{ margin-top:10px; }
+  #visual-stage img{ width:100%; border-radius:10px; border:1px solid var(--line); display:block; }
+  .visual-note{ font-size:12px; color:var(--ink-soft); margin-top:7px; font-style:italic; text-align:center; }
+  .visual-skel{ width:100%; height:180px; border-radius:10px; border:1px solid var(--line);
+    background:linear-gradient(90deg,var(--cream-dark),#f4ecdd,var(--cream-dark));
+    background-size:200% 100%; animation:shimmer 1.3s linear infinite; }
+  @keyframes shimmer{ from{background-position:200% 0;} to{background-position:-200% 0;} }
+  .judgment-card{ background:#fffdf8; border:2px solid var(--ink); border-radius:12px; padding:16px; margin-top:6px; }
+  .judgment-card .jhead{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .judgment-card h2{ margin:0; font-size:21px; }
+  .pill{ font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:20px; background:var(--green); color:#fff; white-space:nowrap; }
+  .pill.tie{ background:var(--ink-soft); }
+  .duel-head{ font-family:Georgia,serif; font-weight:700; font-size:14px; margin:12px 0 6px; padding-top:10px; border-top:1px solid var(--line); }
+  .duel-row{ display:flex; align-items:center; gap:6px; font-size:12px; padding:4px 0; border-bottom:1px solid var(--line); }
+  .duel-side{ flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ink-soft); }
+  .duel-side.right{ text-align:right; }
+  .duel-side.won{ color:var(--ink); font-weight:600; }
+  .duel-mid{ font-size:10.5px; color:var(--ink-soft); white-space:nowrap; }
+  .duel-foot{ font-size:11.5px; color:var(--ink-soft); margin-top:7px; font-style:italic; }
+  .judgment-text{ font-size:14.5px; line-height:1.55; color:var(--ink); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="stats-overlay" class="hidden">
+    <div id="stats-card">
+      <h2 class="serif" style="margin:0 0 4px;">Your record</h2>
+      <div id="stats-body"></div>
+      <button class="btn btn-primary" id="btn-stats-close">Close</button>
+      <button class="btn btn-ghost" id="btn-stats-reset">reset my stats</button>
+    </div>
+  </div>
+
+  <div id="howto-overlay" class="hidden">
+    <div id="howto-card">
+      <h2 class="serif" style="margin:0 0 4px;">How Dr4fter works</h2>
+      <p style="color:var(--ink-soft); font-size:13px; margin:0 0 14px;">30 seconds and you're playing.</p>
+      <div class="howto-step"><b>1. Pick a theme.</b> Free-for-all lists, position drafts (5-a-side, pizza, movie), or a club rivalry.</div>
+      <div class="howto-step"><b>2. Everyone gets $20 and 5 slots.</b> Items come up one at a time.</div>
+      <div class="howto-step"><b>3. Bid or pass.</b> Raise by any amount you can afford. Highest bid wins the lot and pays exactly that.</div>
+      <div class="howto-step"><b>4. Run out of money?</b> Once you're at exactly $0, remaining lots you still need come to you free.</div>
+      <div class="howto-step"><b>5. Best collection wins.</b> Every item has a 1–10 rating — spending more doesn't win, picking better does.</div>
+      <button class="btn btn-primary" id="btn-howto-close">Got it</button>
+      <button class="btn btn-ghost" id="btn-howto-never">Don't show this again</button>
+    </div>
+  </div>
+
+  <div class="masthead">
+    <h1>Dr<span class="four">4</span>fter</h1>
+    <p>a live auction party game</p>
+  </div>
+
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="screen-home">
+    <div class="card hidden" id="rejoin-bar" style="background:#eef4ee; border-color:var(--green);">
+      <div style="font-weight:700; margin-bottom:4px;">↩︎ You were in a room</div>
+      <div id="rejoin-text" style="font-size:13px; color:var(--ink-soft); margin-bottom:8px;"></div>
+      <button class="btn btn-primary" id="btn-rejoin">Rejoin</button>
+      <button class="btn btn-ghost" id="btn-rejoin-dismiss">no thanks</button>
+    </div>
+
+    <div class="card hidden" id="rematch-bar" style="background:#fdf1ec; border-color:var(--rust);">
+      <div style="font-weight:700; margin-bottom:6px;">🔁 Rematch — pick a theme, same room code</div>
+      <button class="btn btn-primary" id="btn-start-rematch">Start Rematch</button>
+      <button class="btn btn-ghost" id="btn-cancel-rematch">cancel rematch</button>
+    </div>
+    <div class="section-label" id="pack-label">choose a pack</div>
+    <div class="theme-grid" id="pack-grid"></div>
+
+    <div id="pack-open" class="hidden">
+      <button class="btn btn-ghost" id="btn-pack-back" style="text-align:left;">← all packs</button>
+      <div class="section-label" id="pack-open-label"></div>
+      <div class="theme-grid" id="theme-grid"></div>
+    </div>
+
+    <div class="card" id="custom-theme-card">
+      <div style="font-weight:700; margin-bottom:8px;">✏️ Or type your own</div>
+      <input type="text" id="custom-theme-input" placeholder="e.g. Treehouse, Road Trip, Cursed Items" maxlength="40">
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-secondary" id="btn-use-custom-space">🏠 Kit out a place</button>
+        <button class="btn btn-secondary" id="btn-use-custom-things">📋 Rank the things</button>
+      </div>
+      <div style="font-size:11.5px; color:var(--ink-soft); margin-top:7px; line-height:1.45;">
+        <b>Kit out a place</b> bids on what goes <i>inside</i> it (TV, mini fridge, zipline).<br>
+        <b>Rank the things</b> bids on versions of the thing itself.
+      </div>
+    </div>
+
+    <div class="section-label" id="mode-select-label">how do you want to play</div>
+    <div class="card" id="mode-select-card">
+      <div class="section-label" style="margin-top:0;">who are you playing?</div>
+      <div id="opponent-list" style="margin-bottom:10px;"></div>
+      <button class="btn btn-primary" id="btn-practice">🤖 Practice vs AI</button>
+      <button class="btn btn-secondary" id="btn-create-room">🌐 Create Online Room</button>
+      <button class="btn btn-secondary" id="btn-join-room">🔑 Join Room with Code</button>
+    </div>
+    <p class="footer-note">$20 budget · 5 items · highest bid wins the lot<br>
+      <span id="btn-howto-open" style="color:var(--rust); text-decoration:underline; cursor:pointer;">how to play</span>
+       · <span id="btn-stats-open" style="color:var(--rust); text-decoration:underline; cursor:pointer;">my stats</span></p>
+  </div>
+
+  <!-- JOIN / NICKNAME SCREEN -->
+  <div class="screen" id="screen-nickname">
+    <h2 class="serif">Before we start…</h2>
+    <div class="card">
+      <div id="nickname-context" style="margin-bottom:10px; font-size:14px; color:var(--ink-soft);"></div>
+      <input type="text" id="nickname-input" placeholder="Your nickname" maxlength="16">
+      <div id="join-code-wrap" class="hidden">
+        <input type="text" id="join-code-input" placeholder="ROOM CODE" maxlength="5" style="margin-top:10px; text-transform:uppercase; letter-spacing:4px; text-align:center;">
+      </div>
+      <div id="host-mode-wrap" class="hidden">
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn btn-secondary" data-hostmode="2p" id="btn-mode-2p">2-Player</button>
+          <button class="btn btn-secondary" data-hostmode="3p" id="btn-mode-3p">3-Player (Hosted)</button>
+        </div>
+        <button class="btn btn-secondary" data-hostmode="2v2" id="btn-mode-2v2" style="margin-top:8px;">2v2 Teams</button>
+      </div>
+      <button class="btn btn-primary" id="btn-nickname-continue">Continue</button>
+      <button class="btn btn-ghost" id="btn-nickname-back">← back</button>
+    </div>
+  </div>
+
+  <!-- LOBBY SCREEN -->
+  <div class="screen" id="screen-lobby">
+    <h2 class="serif center">Waiting Room</h2>
+    <div class="card center">
+      <div id="lobby-role-note" style="font-size:13px; color:var(--ink-soft); margin-bottom:6px;"></div>
+      <div class="room-code" id="lobby-code">-----</div>
+      <button class="btn btn-secondary" id="btn-copy-code" style="margin-top:0;">📋 Copy code</button>
+      <button class="btn btn-secondary" id="btn-show-qr">📱 Show QR code</button>
+      <div id="qr-wrap" class="hidden">
+        <div id="qr-box"></div>
+        <div id="qr-caption">Point a camera at this to join</div>
+      </div>
+      <p style="font-size:13px; color:var(--ink-soft);">Share this code with the other player<span id="lobby-plural"></span>.</p>
+      <div id="lobby-players" style="margin:14px 0;"></div>
+      <div class="waiting-note" id="lobby-waiting">Waiting for players to join…</div>
+      <button class="btn btn-ghost" id="btn-lobby-leave">← leave room</button>
+    </div>
+  </div>
+
+  <!-- DRAFT SCREEN -->
+  <div class="screen" id="screen-draft">
+    <div class="status-line" id="status-line"></div>
+    <div id="host-watch-note" class="waiting-note hidden">You're hosting — sit back and watch the bidding.</div>
+
+    <div id="draft-active-area">
+      <div class="lot-card" id="lot-card">
+        <div class="cat" id="lot-cat"></div>
+        <div class="name" id="lot-name">—</div>
+        <div class="stars" id="lot-stars"></div>
+      </div>
+      <div class="bid-display" id="bid-display">$0</div>
+      <div class="ticker" id="ticker"></div>
+
+      <div id="team-consensus-banner" class="hidden">
+        <div id="consensus-text"></div>
+        <button class="btn btn-primary hidden" id="btn-agree-team" style="margin-top:6px;"></button>
+      </div>
+      <div id="bid-controls">
+        <input type="number" id="bid-amount-input" inputmode="numeric" class="bid-amount-input">
+        <div class="btn-row" style="margin-top:10px;">
+          <button class="btn btn-raise" id="btn-submit-bid">Raise</button>
+          <button class="btn btn-skip" id="btn-secondary-bid">Pass</button>
+        </div>
+        <div class="bid-caption" id="bid-caption">You have $20 left.</div>
+      </div>
+      <div id="waiting-turn" class="waiting-note hidden">Waiting for the other player…</div>
+    </div>
+
+    <div id="host-pick-panel" class="hidden">
+      <div class="section-label" id="host-pick-label">choose the next lot</div>
+      <div class="card" style="padding:12px;">
+        <div style="font-size:12.5px; color:var(--ink-soft); margin-bottom:8px;">Or write your own lot:</div>
+        <input type="text" id="custom-lot-name" placeholder="e.g. A private submarine dock" maxlength="60">
+        <div class="btn-row" style="margin-top:8px; align-items:center;">
+          <div style="flex:0 0 auto; font-size:12.5px; color:var(--ink-soft);">Rating</div>
+          <input type="number" id="custom-lot-rating" min="1" max="10" value="6"
+            style="flex:0 0 70px; padding:10px; font-size:16px; text-align:center; border:1px solid var(--line); border-radius:8px; background:#fffdf8; font-family:'SF Mono',monospace;">
+          <button class="btn btn-primary" id="btn-custom-lot" style="flex:1; margin-top:0;">Put it up</button>
+        </div>
+        <div id="custom-lot-error" style="font-size:12px; color:var(--rust); margin-top:7px;"></div>
+      </div>
+      <div id="host-pick-list"></div>
+    </div>
+
+    <div class="section-label">players</div>
+    <div class="stall-row" id="stall-row"></div>
+  </div>
+
+  <!-- RESULTS SCREEN -->
+  <div class="screen" id="screen-results">
+    <div id="results-card">
+      <h2 class="serif" id="results-title">Results</h2>
+      <div class="subhead" id="results-subhead"></div>
+      <div id="pitches-wrap"></div>
+      <div id="picks-wrap"></div>
+      <div id="visual-wrap" class="hidden">
+        <div class="section-label" style="margin-top:14px;">✨ picture it</div>
+        <div id="visual-buttons" class="btn-row"></div>
+        <div id="visual-stage"></div>
+      </div>
+      <div id="flavor-wrap"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-save-image">📸 Save as Image</button>
+    <button class="btn btn-secondary" id="btn-copy-text">📋 Copy as text</button>
+    <button class="btn btn-secondary hidden" id="btn-copy-link">🔗 Copy shareable link</button>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="btn-rematch">🔁 Rematch (same room)</button>
+      <button class="btn btn-secondary" id="btn-home">🏠 New Game</button>
+    </div>
+  </div>
+
+  <div class="footer-note" id="footer-debug-trigger">Dr4fter · offline judge, no AI API required</div>
+
+  <div id="debug-panel" class="hidden">
+    <div class="debug-panel-head">
+      <b>Console</b>
+      <div>
+        <button id="btn-debug-copy">Copy</button>
+        <button id="btn-debug-clear">Clear</button>
+        <button id="btn-debug-close">✕</button>
+      </div>
+    </div>
+    <div id="debug-log-content">Type a command below.</div>
+    <div class="debug-cmd-row">
+      <input type="text" id="debug-cmd-input" placeholder="finish · reveal · list · next 102">
+      <button id="btn-debug-run">Run</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ============ ON-PAGE DEBUG CONSOLE ============ */
+/* Tap the footer text (or the lot category label mid-game) 5x to open.
+   Command input only — money / money+ / next / state / help. */
+window.__debugLog = [];
+function debugLog(msg){
+  const ts = new Date().toLocaleTimeString();
+  window.__debugLog.push({ts, msg});
+  if(window.__debugLog.length>200) window.__debugLog.shift();
+  const content = document.getElementById('debug-log-content');
+  if(content){
+    content.innerHTML = window.__debugLog.map(e=>`<div class="debug-entry"><span class="ts">${e.ts}</span> ${e.msg.replace(/[<>]/g,c=>c==='<'?'&lt;':'&gt;')}</div>`).join('') || 'Type a command below.';
+  }
+}
+
+/* ============ DATA ============ */
+const THEMES = {
+backyard:{emoji:'🏡',name:'Backyard',items:[
+ ['In-ground swimming pool',9],['Full outdoor kitchen with built-in grill',8],['Fire pit with stone seating',7],
+ ['Trampoline',5],['Hot tub',8],['Treehouse',6],['Hammock between two oak trees',5],['Outdoor pizza oven',7],
+ ['Basketball hoop',5],['Vegetable garden beds',4],['String lights across the patio',4],['Zip line',6],
+ ['Putting green',6],['Gazebo with curtains',6],['Chicken coop',4],['Koi pond',6],
+ ['Outdoor movie screen and projector',7],['Sandbox',3],['Badminton net',3],['Greenhouse',5],
+ ['Fenced dog run',4],['Adirondack chairs, set of four',3]]},
+gaming:{emoji:'🎮',name:'Gaming Room',items:[
+ ['4K OLED TV mounted on the wall',8],['Custom gaming PC with RGB lighting',9],['Full arcade cabinet',8],
+ ['Racing simulator rig with force feedback wheel',8],['Massage gaming chair',6],
+ ['Retro console shelf (NES, SNES, N64)',5],['VR headset and play space',7],['Surround sound speaker system',6],
+ ['Mini fridge stocked with drinks',4],['LED strip lighting',3],['Pinball machine',7],['Foosball table',5],
+ ['Wall of framed game art',4],['Streaming setup with green screen',6],['Bean bag chairs',2],
+ ['Snack bar counter',4],['Soundproofing panels',5],['Ping pong table',4],['Poster of a favorite game',2],
+ ['Bluetooth controller charging station',3]]},
+bunker:{emoji:'🛡️',name:'Underground Bunker',items:[
+ ['Blast door entrance',8],['Air filtration and ventilation system',8],['Backup diesel generator',7],
+ ['Freeze-dried food pantry, one-year supply',7],['Water purification system',7],
+ ['Medical bay with first-aid supplies',6],['Bunk beds for six',5],['Solar panel array',7],
+ ['Ham radio communication station',6],['Gun safe with security lock',6],['Hydroponic grow room',6],
+ ['Reinforced concrete walls',6],['Composting toilet',3],['Board game and book library',3],
+ ['Water storage tanks',5],['Escape tunnel',7],['Security camera system',5],['Workshop with hand tools',4],
+ ['Rec room with a pool table',4],['Emergency battery bank',5]]},
+vacation:{emoji:'🏝️',name:'Perfect Vacation',items:[
+ ['Overwater bungalow in Bora Bora',9],['Private chef for the week',7],['First-class flights',7],
+ ['Helicopter tour over the coastline',6],['Scuba diving excursion',6],
+ ['Beachfront villa with an infinity pool',8],['Spa day with a full-body massage',5],
+ ['Guided hike to a waterfall',4],['Sunset sailing cruise',5],['Local cooking class',3],
+ ['Rooftop dinner reservation',4],['Rental convertible for the trip',5],['Snorkeling with sea turtles',6],
+ ['Overnight stay in a treehouse resort',5],['Street food tour',3],['Museum and gallery pass',3],
+ ['Hot air balloon ride at sunrise',6],['Beachside hammock and a good book',2],
+ ['Souvenir shopping afternoon',2],['Late checkout upgrade',2]]},
+superhero:{emoji:'🦸',name:'Superhero Draft',items:[
+ ['Flight',9],['Super strength',8],['Telepathy',7],['Invisibility',6],['Super speed',8],
+ ['Regeneration / healing factor',8],['Energy blasts',7],['Time manipulation',9],['Shapeshifting',6],
+ ['Telekinesis',7],['X-ray vision',4],['Elemental control (fire and ice)',6],['Force field projection',6],
+ ['Enhanced senses',4],['Weather control',6],['Teleportation',8],['Sidekick partner',3],
+ ['High-tech utility belt',4],['Signature costume with a cape',2],['Secret hideout lair',4],
+ ['Loyal sidekick vehicle',3],['Catchphrase and a theme song',2]]},
+perfectlife:{emoji:'✨',name:'Perfect Life',items:[
+ ['Financially independent, no debt',9],['Loving, supportive close friends',8],
+ ['Dream career doing meaningful work',8],['Excellent health into old age',9],['A house you truly love',7],
+ ['Strong, happy marriage',8],['Time for hobbies every week',5],['World travel every year',6],
+ ['A dog that adores you',5],['Skill mastery in something creative',5],
+ ['A big garden to grow food in',4],['Weekly family dinners',4],['A reliable, comfortable car',3],
+ ['Quiet mornings with good coffee',3],['A book club you love',2],['Season tickets to your favorite team',3],
+ ['A well-stocked home library',3],['A standing Friday night tradition',2],['Neighbors who become friends',3],
+ ['A garden shed workshop',2]]},
+fruit:{emoji:'🍑',name:'Best Fruit',items:[
+ ['Mango',8],['Strawberry',7],['Pineapple',7],['Watermelon',6],['Grapes',6],['Blueberries',7],['Peach',6],
+ ['Cherries',7],['Dragon fruit',6],['Banana',5],['Apple',5],['Kiwi',5],['Raspberry',6],['Pomegranate',6],
+ ['Orange',5],['Fig',5],['Lychee',6],['Cantaloupe',4]]},
+movies:{emoji:'🎬',name:'Best Movies',items:[
+ ['The Godfather',9],['The Shawshank Redemption',9],['Jurassic Park',7],['The Dark Knight',8],
+ ['Pulp Fiction',8],['Titanic',7],['Inception',8],['Forrest Gump',7],['The Matrix',8],['Jaws',7],
+ ['Back to the Future',6],['Gladiator',6],['The Lion King',6],['Toy Story',6],['Casablanca',6],
+ ['Goodfellas',7],['Parasite',7],['The Grand Budapest Hotel',5],['La La Land',5],['Rocky',5]]},
+tvshows:{emoji:'📺',name:'Best TV Shows',items:[
+ ['Breaking Bad',9],['The Sopranos',8],['The Wire',8],['Game of Thrones',7],['Friends',6],['The Office',6],
+ ['Stranger Things',6],['Seinfeld',6],['The Crown',5],['Better Call Saul',7],['Chernobyl',6],['Fargo',6],
+ ['Succession',7],['The Bear',6],['True Detective',6],['Cheers',4],['Parks and Recreation',5],
+ ['Curb Your Enthusiasm',5],['The West Wing',5],['Ted Lasso',5]]},
+videogames:{emoji:'🎮',name:'Best Video Games',items:[
+ ['The Legend of Zelda: Breath of the Wild',9],['Elden Ring',9],['Minecraft',8],['Red Dead Redemption 2',9],
+ ['The Witcher 3',9],['Super Mario Odyssey',8],['Portal 2',8],['Grand Theft Auto V',8],
+ ['Dark Souls',8],['Half-Life 2',8],['Tetris',7],['Fortnite',6],['Stardew Valley',7],
+ ['Hollow Knight',8],['God of War',8],['Among Us',5],['Halo: Combat Evolved',8],
+ ['Celeste',7],['Rocket League',7],['Animal Crossing: New Horizons',6],['Doom Eternal',7],
+ ['Balatro',7]]},
+music:{emoji:'🎤',name:'Best Music Artists',items:[
+ ['The Beatles',9],['Beyoncé',8],['Michael Jackson',9],['Taylor Swift',8],['Kendrick Lamar',8],['Queen',8],
+ ['Stevie Wonder',8],['Adele',6],['Prince',8],['Rihanna',6],['Radiohead',6],['Bob Dylan',7],
+ ['Whitney Houston',7],['Kanye West',6],['Nirvana',6],['Fleetwood Mac',6],['Frank Ocean',5],['Daft Punk',5],
+ ['Amy Winehouse',6],['The Rolling Stones',7]]}
+};
+
+const CUSTOM_ADJ = ['Vintage {T}','Luxury {T}','Limited-Edition {T}','Handcrafted {T}','Deluxe {T}','Rare {T}'];
+const CUSTOM_FEAT = ['{T} with a secret menu','{T} signed by its creator','{T} with a lifetime warranty',
+ '{T} featured in a magazine','{T} with a hidden compartment','{T} built by local artisans',
+ '{T} with a members-only waitlist','{T} that took a year to make'];
+const CUSTOM_FILLER = ['A basic {t} starter kit','A gently used {t}','An entry-level {t}','A {t} sample pack',
+ 'A no-frills {t}','A budget {t}','A secondhand {t}','A travel-size {t}'];
+
+// For a custom theme that's a PLACE you're kitting out, the interesting items
+// are the things that go IN it — not variations of the place itself. This is a
+// generic amenity bank (the generator is offline and can't know what a
+// "treehouse" specifically contains, so these are chosen to suit any space).
+const CUSTOM_SPACE_ITEMS = [
+ ['A 65-inch flat-screen TV',8],['A full gaming setup',8],['A mini fridge stocked with drinks',6],
+ ['String lights',4],['A zipline off the side',7],['A projector and screen',7],
+ ['Surround sound speakers',6],['A bean bag pit',5],['A hammock',4],
+ ['Wi-Fi that never drops',7],['Air conditioning',7],['A wood stove',6],
+ ['A skylight',6],['A rope ladder',3],['A secret trapdoor entrance',7],
+ ['A snack bar counter',5],['A coffee machine',5],['A record player',5],
+ ['Blackout curtains',4],['Heated floors',6],['A telescope',5],
+ ['A bookshelf wall',5],['Neon signage',5],['A pull-out sofa bed',5],
+ ['Solar panels on the roof',6],['A pizza oven',7],['A dartboard',4],
+ ['A pool table',7],['An arcade cabinet',7],['A cozy reading nook',5],
+ ['Panoramic windows',7],['A hot tub',8],['A whiteboard wall',3],
+ ['A drinks fridge with a glass door',6],['Motion-sensor lighting',4],
+ ['A hidden storage compartment',5],['A spiral staircase',6],['A balcony',7],
+ ['Bunk beds',4],['A charging station for every device',5]
+];
+
+const FOOTBALL = {
+ pool:{
+  GK:[['Alisson Becker',9],['Ederson',8],['Thibaut Courtois',9],['Marc-André ter Stegen',8],
+      ['Gianluigi Donnarumma',8],['Emiliano Martínez',8],['Jan Oblak',8],['Mike Maignan',8],
+      ['Yassine Bounou',7],['David Raya',7],['André Onana',7],['Nick Pope',7],['Bernd Leno',6],
+      ['Robert Sánchez',6],['Diogo Costa',7],['Yann Sommer',7]],
+  DEF:[['Virgil van Dijk',9],['Rúben Dias',9],['William Saliba',8],['Antonio Rüdiger',8],['Achraf Hakimi',8],
+      ['Trent Alexander-Arnold',8],['Alphonso Davies',8],['Theo Hernández',8],['Josko Gvardiol',8],
+      ['Kim Min-jae',7],['Marquinhos',8],['Éder Militão',7],['John Stones',7],['Kyle Walker',7],
+      ['Jules Koundé',7],['Dayot Upamecano',7],['Manuel Akanji',7],['Ben White',6],['Cristian Romero',7],
+      ['Lisandro Martínez',7],['Milan Škriniar',7],['Gabriel Magalhães',7],['Nathan Aké',6],['Reece James',7],
+      ['Alessandro Bastoni',8],['Federico Dimarco',7],['Nuno Mendes',7],['Raphaël Varane',7],
+      ['Pau Torres',6],['Ronald Araújo',7]],
+  MID:[['Kevin De Bruyne',9],['Jude Bellingham',9],['Rodri',9],['Bukayo Saka',9],['Pedri',8],['Gavi',7],
+      ['Federico Valverde',8],['Martin Ødegaard',8],['Bruno Fernandes',8],['Declan Rice',8],['Vitinha',7],
+      ['Frenkie de Jong',7],['Jamal Musiala',8],['Florian Wirtz',8],['Enzo Fernández',7],
+      ['Moisés Caicedo',7],['Alexis Mac Allister',7],['Aurélien Tchouaméni',7],['Eduardo Camavinga',7],
+      ['Nicolò Barella',7],['Sandro Tonali',7],['Ismaël Bennacer',6],['Fabián Ruiz',6],['Marco Verratti',7],
+      ['İlkay Gündoğan',7],['Casemiro',7],['Christian Eriksen',6],['Dominik Szoboszlai',7],
+      ['Joshua Kimmich',8],['Leon Goretzka',6],['Hakan Çalhanoğlu',8],['Henrikh Mkhitaryan',6]],
+  ATT:[['Erling Haaland',10],['Kylian Mbappé',10],['Vinícius Júnior',9],['Harry Kane',9],['Mohamed Salah',9],
+      ['Lautaro Martínez',8],['Victor Osimhen',8],['Ousmane Dembélé',8],['Rafael Leão',7],
+      ['Khvicha Kvaratskhelia',8],['Phil Foden',8],['Julian Álvarez',7],['Randal Kolo Muani',6],
+      ['Marcus Rashford',6],['Darwin Núñez',6],['Serhou Guirassy',6],['Alexander Isak',8],
+      ['Ollie Watkins',6],['Cody Gakpo',6],['Nicolas Jackson',6],['Gabriel Jesus',6],['Dušan Vlahović',6],
+      ['Federico Chiesa',6],['Kingsley Coman',6],['Marcus Thuram',7]]
+ },
+ icons:{
+  GK:[['Gianluigi Buffon',9],['Iker Casillas',9],['Petr Čech',9],['Manuel Neuer',9],['Edwin van der Sar',8],
+      ['Oliver Kahn',9],['José Luis Chilavert',8],['David Seaman',8]],
+  DEF:[['Paolo Maldini',10],['Franco Baresi',9],['Cafu',9],['Roberto Carlos',9],['Sergio Ramos',9],
+      ['Fabio Cannavaro',9],['Ashley Cole',8],['Philipp Lahm',9]],
+  MID:[['Zinedine Zidane',10],['Andrea Pirlo',9],['Xavi Hernández',9],['Andrés Iniesta',9],
+      ['Steven Gerrard',9],['Frank Lampard',8],['Michael Ballack',8],['Paul Scholes',8]],
+  ATT:[['Pelé',10],['Diego Maradona',10],['Ronaldo Nazário',10],['Thierry Henry',9],['Ronaldinho',9],
+      ['Zlatan Ibrahimović',9],['Didier Drogba',8],['Alan Shearer',8]]
+ }
+};
+const FOOTBALL_CATS = ['GK','DEF','MID','ATT'];
+const FOOTBALL_REQUIRED = {GK:1,DEF:1,MID:2,ATT:1};
+
+const SANDWICH = {
+ pool:{
+  BREAD:[['Sourdough',6],['Brioche bun',7],['Rye',5],['Ciabatta',6],['White sandwich bread',3],['Whole wheat',4],['Pretzel bun',6],['Baguette',6]],
+  MEAT:[['Turkey breast',5],['Roast beef',7],['Fried chicken cutlet',7],['Bacon',8],['Prosciutto',8],['Salami',6],['Pulled pork',7],['Grilled steak',8],['Ham',5],['Meatball',6]],
+  CHEESE:[['Swiss',5],['Cheddar',6],['Pepper jack',6],['Provolone',5],['Mozzarella',5],['Brie',7],['Blue cheese',6],['American',4]],
+  CONDIMENT:[['Mayo',4],['Mustard',4],['Ranch',5],['Sriracha mayo',6],['BBQ sauce',5],['Pesto',6],['Honey mustard',5],['Chipotle aioli',6]],
+  TOPPING:[['Lettuce',3],['Tomato',4],['Red onion',3],['Pickles',4],['Avocado',7],['Caramelized onions',6],['Jalapeños',5],['Arugula',4],['Coleslaw',5],['Fried egg',6]]
+ }
+};
+const SANDWICH_CATS = ['BREAD','MEAT','CHEESE','CONDIMENT','TOPPING'];
+const SANDWICH_REQUIRED = {BREAD:1,MEAT:1,CHEESE:1,CONDIMENT:1,TOPPING:1};
+
+const MOVIE = {
+ pool:{
+  GENRE:[['Sci-fi epic',8],['Romantic comedy',5],['Heist thriller',7],['Slasher horror',6],['High-fantasy adventure',8],
+      ['Buddy-cop comedy',5],['Space opera',8],['Coming-of-age drama',5],['Noir detective mystery',6],
+      ['Superhero origin story',6],['Post-apocalyptic survival',6],['Courtroom drama',5]],
+  DIRECTOR:[['Directed by Christopher Nolan',9],['Directed by Steven Spielberg',9],['Directed by Martin Scorsese',9],
+      ['Directed by Quentin Tarantino',8],['Directed by Denis Villeneuve',8],['Directed by Greta Gerwig',7],
+      ['Directed by Jordan Peele',7],['Directed by Bong Joon-ho',8],['Directed by James Cameron',8],
+      ['Directed by Wes Anderson',7],['Directed by Ridley Scott',7],['Directed by Taika Waititi',6],
+      ['Directed by Ryan Coogler',7],['Directed by Sofia Coppola',6],['Directed by Guillermo del Toro',8]],
+  ACTOR:[['Starring Robert Downey Jr.',9],['Starring George Clooney',8],['Starring Tom Holland',7],
+      ['Starring Meryl Streep',9],['Starring Leonardo DiCaprio',9],['Starring Denzel Washington',9],
+      ['Starring Zendaya',7],['Starring Timothée Chalamet',7],['Starring Margot Robbie',8],['Starring Brad Pitt',8],
+      ['Starring Viola Davis',8],['Starring Tom Hanks',8],['Starring Florence Pugh',7],['Starring Michael B. Jordan',7],
+      ['Starring Cate Blanchett',8],['Starring Ryan Gosling',7],['Starring Emma Stone',8],['Starring Dwayne Johnson',6],
+      ['Starring Anya Taylor-Joy',7],['Starring Idris Elba',7],['Starring Scarlett Johansson',7],
+      ['Starring Jennifer Lawrence',7],['Starring Chris Hemsworth',6],['Starring Awkwafina',6],['Starring Paul Mescal',6]],
+  SETTING:[['Outer space',8],['A haunted mansion',6],['A neon-lit cyberpunk city',8],['A remote desert town',5],['A cruise ship',5],
+      ['Ancient Rome',6],['A post-apocalyptic wasteland',6],['A small snowed-in cabin',5],['Deep underwater',7],
+      ['A bustling 1920s speakeasy',6],['The Wild West',6],['A dystopian megacity',7]]
+ }
+};
+const ISLAND = {
+ pool:{
+  SETTING:[['A Caribbean atoll with a turquoise lagoon',9],['A rugged Scottish isle with sea cliffs',7],
+      ['A Greek island with whitewashed cliffs',8],['A Pacific volcanic island',8],
+      ['A forested Nordic skerry',7],['A Maldivian sandbar',8],['A misty Irish island with ruins',6],
+      ['A mangrove island in the tropics',5],['A rocky outcrop with one lighthouse',5],
+      ['A palm-covered desert island',7],['An island with its own microclimate',7],
+      ['A tidal island you can walk to at low tide',6]],
+  HOME:[['A glass-walled cliffside villa',9],['An overwater bungalow on stilts',9],
+      ['A restored stone lighthouse',7],['A treehouse compound in the canopy',8],
+      ['An underground bunker-mansion',7],['A traditional thatched beach hut',5],
+      ['A converted shipwreck',6],['A modernist concrete bunker with sea views',7],
+      ['A hobbit-style earth house',6],['A luxury tented camp',6],
+      ['A floating houseboat moored in the bay',6],['A basic wooden cabin',3]],
+  TRANSPORT:[['A private seaplane',9],['A sailing yacht',8],['A speedboat',7],
+      ['A helicopter and helipad',9],['A submarine',8],['A fleet of golf buggies',5],
+      ['Horses',5],['A zipline network across the island',7],['Kayaks and paddleboards',4],
+      ['A vintage wooden dinghy',3],['An electric moke',5],['A funicular up the cliff',6]],
+  AMENITY:[['A freshwater spring',7],['Satellite internet',7],['A solar farm',7],
+      ['An infinity pool over the sea',8],['A private coral reef',8],['A wine cellar carved into rock',7],
+      ['A helipad-side bar',6],['A working vegetable farm',6],['A desalination plant',6],
+      ['A cinema room',6],['A recording studio',6],['A spa and sauna',6],
+      ['A full-time private chef',8],['A boathouse with a jetty',6],['A tennis court',5],
+      ['A herd of goats',3],['A hammock grove',4],['A lookout tower',5],
+      ['A shipwreck dive site',7],['Bioluminescent plankton in the bay',8]]
+ }
+};
+const ISLAND_CATS = ['SETTING','HOME','TRANSPORT','AMENITY'];
+const ISLAND_REQUIRED = {SETTING:1,HOME:1,TRANSPORT:1,AMENITY:2};
+
+const PIZZA = {
+ pool:{
+  CRUST:[['Neapolitan thin crust',8],['New York foldable slice',8],['Deep dish',7],['Stuffed crust',7],
+      ['Sourdough crust',7],['Detroit-style pan',7],['Cauliflower crust',3],['Thin cracker crust',5],
+      ['Garlic butter crust',6],['Wood-fired charred crust',8]],
+  SAUCE:[['San Marzano tomato',8],['Garlic white sauce',7],['Spicy arrabbiata',7],['Basil pesto',7],
+      ['BBQ sauce',5],['Vodka sauce',7],['Hot honey drizzle',7],['Plain canned tomato',3],
+      ['Alfredo',5],['Olive oil and garlic (no sauce)',5]],
+  CHEESE:[['Fresh buffalo mozzarella',9],['Low-moisture mozzarella',7],['Burrata',8],['Four-cheese blend',8],
+      ['Smoked provolone',7],['Ricotta dollops',6],['Parmesan',6],['Vegan cheese',3],
+      ['Extra cheese, double portion',7],['Goat cheese',6]],
+  TOPPING:[['Pepperoni',8],['Italian sausage',7],['Fresh basil',6],['Prosciutto',8],['Mushrooms',6],
+      ['Caramelized onions',6],['Hot soppressata',8],['Bell peppers',4],['Black olives',4],
+      ['Pineapple',4],['Jalapeños',6],['Bacon',7],['Artichoke hearts',5],['Anchovies',3],
+      ['Arugula',5],['Cherry tomatoes',5],['Roasted garlic',6],['Ground beef',5]]
+ }
+};
+const PIZZA_CATS = ['CRUST','SAUCE','CHEESE','TOPPING'];
+const PIZZA_REQUIRED = {CRUST:1,SAUCE:1,CHEESE:1,TOPPING:2};
+
+const MOVIE_CATS = ['GENRE','DIRECTOR','ACTOR','SETTING'];
+const MOVIE_REQUIRED = {GENRE:1,DIRECTOR:1,ACTOR:2,SETTING:1};
+
+// Unified registry for every category-based (position-draft-style) theme.
+// icons:null means no rare/legendary sub-pool for that theme (football only, for now).
+const CATEGORY_THEMES = {
+ football:{name:'5-a-Side Draft', emoji:'⚽', cats:FOOTBALL_CATS, required:FOOTBALL_REQUIRED, pool:FOOTBALL.pool, icons:FOOTBALL.icons,
+   catLabel:{GK:'⚽ Goalkeeper',DEF:'⚽ Defender',MID:'⚽ Midfielder',ATT:'⚽ Attacker'},
+   catShort:{GK:'GK',DEF:'DEF',MID:'MID',ATT:'ATT'}, resultView:'pitch'},
+ sandwich:{name:'Build A Sandwich', emoji:'🥪', cats:SANDWICH_CATS, required:SANDWICH_REQUIRED, pool:SANDWICH.pool, icons:null,
+   catLabel:{BREAD:'🍞 Bread',MEAT:'🥩 Meat',CHEESE:'🧀 Cheese',CONDIMENT:'🫙 Condiment',TOPPING:'🥬 Topping'},
+   catShort:{BREAD:'Bread',MEAT:'Meat',CHEESE:'Cheese',CONDIMENT:'Condiment',TOPPING:'Topping'}, resultView:'list'},
+ movie:{name:'Build Your Perfect Movie', emoji:'🎬', cats:MOVIE_CATS, required:MOVIE_REQUIRED, pool:MOVIE.pool, icons:null,
+   catLabel:{GENRE:'🎭 Genre',DIRECTOR:'🎥 Director',ACTOR:'⭐ Actor',SETTING:'🌍 Setting'},
+   catShort:{GENRE:'Genre',DIRECTOR:'Director',ACTOR:'Actor',SETTING:'Setting'}, resultView:'list'},
+ pizza:{name:'Build A Pizza', emoji:'🍕', cats:PIZZA_CATS, required:PIZZA_REQUIRED, pool:PIZZA.pool, icons:null,
+   catLabel:{CRUST:'🥖 Crust',SAUCE:'🥫 Sauce',CHEESE:'🧀 Cheese',TOPPING:'🍅 Topping'},
+   catShort:{CRUST:'Crust',SAUCE:'Sauce',CHEESE:'Cheese',TOPPING:'Topping'}, resultView:'list'},
+ island:{name:'Build A Private Island', emoji:'🏝️', cats:ISLAND_CATS, required:ISLAND_REQUIRED, pool:ISLAND.pool, icons:null,
+   catLabel:{SETTING:'🌊 The Island',HOME:'🏠 Your Home',TRANSPORT:'🚤 Getting Around',AMENITY:'✨ Amenity'},
+   catShort:{SETTING:'Island',HOME:'Home',TRANSPORT:'Transport',AMENITY:'Amenity'}, resultView:'list'}
+};
+
+// club = the side they're most associated with (current club for actives,
+// peak/defining club for icons). nation = international side.
+const FOOTBALL_META = {
+ // --- GK pool ---
+ 'Alisson Becker':['Liverpool','Brazil'],
+ 'Ederson':['Manchester City','Brazil'],
+ 'Thibaut Courtois':['Real Madrid','Belgium'],
+ 'Marc-André ter Stegen':['Barcelona','Germany'],
+ 'Gianluigi Donnarumma':['Paris Saint-Germain','Italy'],
+ 'Emiliano Martínez':['Aston Villa','Argentina'],
+ 'Jan Oblak':['Atlético Madrid','Slovenia'],
+ 'Mike Maignan':['AC Milan','France'],
+ 'Yassine Bounou':['Al-Hilal','Morocco'],
+ 'David Raya':['Arsenal','Spain'],
+ 'André Onana':['Manchester United','Cameroon'],
+ 'Nick Pope':['Newcastle United','England'],
+ 'Bernd Leno':['Fulham','Germany'],
+ 'Robert Sánchez':['Chelsea','Spain'],
+ 'Diogo Costa':['Porto','Portugal'],
+ 'Yann Sommer':['Inter Milan','Switzerland'],
+ // --- GK icons ---
+ 'Gianluigi Buffon':['Juventus','Italy'],
+ 'Iker Casillas':['Real Madrid','Spain'],
+ 'Petr Čech':['Chelsea','Czechia'],
+ 'Manuel Neuer':['Bayern Munich','Germany'],
+ 'Edwin van der Sar':['Manchester United','Netherlands'],
+ 'Oliver Kahn':['Bayern Munich','Germany'],
+ 'José Luis Chilavert':['Vélez Sarsfield','Paraguay'],
+ 'David Seaman':['Arsenal','England'],
+ // --- DEF pool ---
+ 'Virgil van Dijk':['Liverpool','Netherlands'],
+ 'Rúben Dias':['Manchester City','Portugal'],
+ 'William Saliba':['Arsenal','France'],
+ 'Antonio Rüdiger':['Real Madrid','Germany'],
+ 'Achraf Hakimi':['Paris Saint-Germain','Morocco'],
+ 'Trent Alexander-Arnold':['Liverpool','England'],
+ 'Alphonso Davies':['Bayern Munich','Canada'],
+ 'Theo Hernández':['AC Milan','France'],
+ 'Josko Gvardiol':['Manchester City','Croatia'],
+ 'Kim Min-jae':['Bayern Munich','South Korea'],
+ 'Marquinhos':['Paris Saint-Germain','Brazil'],
+ 'Éder Militão':['Real Madrid','Brazil'],
+ 'John Stones':['Manchester City','England'],
+ 'Kyle Walker':['Manchester City','England'],
+ 'Jules Koundé':['Barcelona','France'],
+ 'Dayot Upamecano':['Bayern Munich','France'],
+ 'Manuel Akanji':['Manchester City','Switzerland'],
+ 'Ben White':['Arsenal','England'],
+ 'Cristian Romero':['Tottenham Hotspur','Argentina'],
+ 'Lisandro Martínez':['Manchester United','Argentina'],
+ 'Milan Škriniar':['Paris Saint-Germain','Slovakia'],
+ 'Gabriel Magalhães':['Arsenal','Brazil'],
+ 'Nathan Aké':['Manchester City','Netherlands'],
+ 'Reece James':['Chelsea','England'],
+ 'Alessandro Bastoni':['Inter Milan','Italy'],
+ 'Federico Dimarco':['Inter Milan','Italy'],
+ 'Nuno Mendes':['Paris Saint-Germain','Portugal'],
+ 'Raphaël Varane':['Manchester United','France'],
+ 'Pau Torres':['Aston Villa','Spain'],
+ 'Ronald Araújo':['Barcelona','Uruguay'],
+ // --- DEF icons ---
+ 'Paolo Maldini':['AC Milan','Italy'],
+ 'Franco Baresi':['AC Milan','Italy'],
+ 'Cafu':['AC Milan','Brazil'],
+ 'Roberto Carlos':['Real Madrid','Brazil'],
+ 'Sergio Ramos':['Real Madrid','Spain'],
+ 'Fabio Cannavaro':['Real Madrid','Italy'],
+ 'Ashley Cole':['Chelsea','England'],
+ 'Philipp Lahm':['Bayern Munich','Germany'],
+ // --- MID pool ---
+ 'Kevin De Bruyne':['Manchester City','Belgium'],
+ 'Jude Bellingham':['Real Madrid','England'],
+ 'Rodri':['Manchester City','Spain'],
+ 'Bukayo Saka':['Arsenal','England'],
+ 'Pedri':['Barcelona','Spain'],
+ 'Gavi':['Barcelona','Spain'],
+ 'Federico Valverde':['Real Madrid','Uruguay'],
+ 'Martin Ødegaard':['Arsenal','Norway'],
+ 'Bruno Fernandes':['Manchester United','Portugal'],
+ 'Declan Rice':['Arsenal','England'],
+ 'Vitinha':['Paris Saint-Germain','Portugal'],
+ 'Frenkie de Jong':['Barcelona','Netherlands'],
+ 'Jamal Musiala':['Bayern Munich','Germany'],
+ 'Florian Wirtz':['Bayer Leverkusen','Germany'],
+ 'Enzo Fernández':['Chelsea','Argentina'],
+ 'Moisés Caicedo':['Chelsea','Ecuador'],
+ 'Alexis Mac Allister':['Liverpool','Argentina'],
+ 'Aurélien Tchouaméni':['Real Madrid','France'],
+ 'Eduardo Camavinga':['Real Madrid','France'],
+ 'Nicolò Barella':['Inter Milan','Italy'],
+ 'Sandro Tonali':['Newcastle United','Italy'],
+ 'Ismaël Bennacer':['AC Milan','Algeria'],
+ 'Fabián Ruiz':['Paris Saint-Germain','Spain'],
+ 'Marco Verratti':['Paris Saint-Germain','Italy'],
+ 'İlkay Gündoğan':['Barcelona','Germany'],
+ 'Casemiro':['Manchester United','Brazil'],
+ 'Christian Eriksen':['Manchester United','Denmark'],
+ 'Dominik Szoboszlai':['Liverpool','Hungary'],
+ 'Joshua Kimmich':['Bayern Munich','Germany'],
+ 'Leon Goretzka':['Bayern Munich','Germany'],
+ 'Hakan Çalhanoğlu':['Inter Milan','Turkey'],
+ 'Henrikh Mkhitaryan':['Inter Milan','Armenia'],
+ // --- MID icons ---
+ 'Zinedine Zidane':['Real Madrid','France'],
+ 'Andrea Pirlo':['AC Milan','Italy'],
+ 'Xavi Hernández':['Barcelona','Spain'],
+ 'Andrés Iniesta':['Barcelona','Spain'],
+ 'Steven Gerrard':['Liverpool','England'],
+ 'Frank Lampard':['Chelsea','England'],
+ 'Michael Ballack':['Bayern Munich','Germany'],
+ 'Paul Scholes':['Manchester United','England'],
+ // --- ATT pool ---
+ 'Erling Haaland':['Manchester City','Norway'],
+ 'Kylian Mbappé':['Real Madrid','France'],
+ 'Vinícius Júnior':['Real Madrid','Brazil'],
+ 'Harry Kane':['Bayern Munich','England'],
+ 'Mohamed Salah':['Liverpool','Egypt'],
+ 'Lautaro Martínez':['Inter Milan','Argentina'],
+ 'Victor Osimhen':['Napoli','Nigeria'],
+ 'Ousmane Dembélé':['Paris Saint-Germain','France'],
+ 'Rafael Leão':['AC Milan','Portugal'],
+ 'Khvicha Kvaratskhelia':['Napoli','Georgia'],
+ 'Phil Foden':['Manchester City','England'],
+ 'Julian Álvarez':['Atlético Madrid','Argentina'],
+ 'Randal Kolo Muani':['Paris Saint-Germain','France'],
+ 'Marcus Rashford':['Manchester United','England'],
+ 'Darwin Núñez':['Liverpool','Uruguay'],
+ 'Serhou Guirassy':['Borussia Dortmund','Guinea'],
+ 'Alexander Isak':['Newcastle United','Sweden'],
+ 'Ollie Watkins':['Aston Villa','England'],
+ 'Cody Gakpo':['Liverpool','Netherlands'],
+ 'Nicolas Jackson':['Chelsea','Senegal'],
+ 'Gabriel Jesus':['Arsenal','Brazil'],
+ 'Dušan Vlahović':['Juventus','Serbia'],
+ 'Federico Chiesa':['Liverpool','Italy'],
+ 'Kingsley Coman':['Bayern Munich','France'],
+ 'Marcus Thuram':['Inter Milan','France'],
+ // --- ATT icons ---
+ 'Pelé':['Santos','Brazil'],
+ 'Diego Maradona':['Napoli','Argentina'],
+ 'Ronaldo Nazário':['Real Madrid','Brazil'],
+ 'Thierry Henry':['Arsenal','France'],
+ 'Ronaldinho':['Barcelona','Brazil'],
+ 'Zlatan Ibrahimović':['AC Milan','Sweden'],
+ 'Didier Drogba':['Chelsea','Ivory Coast'],
+ 'Alan Shearer':['Newcastle United','England']
+};
+
+// Club legends, used ONLY by the rivalry drafts so they play as all-time
+// squads. The standard 5-a-side draft keeps its current-players-plus-rare-
+// icons pool untouched.
+const FOOTBALL_LEGENDS = {
+ GK:[
+  ['Santiago Cañizares',8],['Claudio Bravo',7],['Víctor Valdés',8],['Peter Schmeichel',9],
+  ['Joe Hart',7],['Dino Zoff',9],['Walter Zenga',8],['Julio César',8],['David de Gea',8],
+  ['Jens Lehmann',8],['Hugo Lloris',8],['Thibaut Courtois',9]
+ ],
+ DEF:[
+  ['Carles Puyol',9],['Gerard Piqué',8],['Dani Alves',9],['Éric Abidal',8],
+  ['Fernando Hierro',8],['Michel Salgado',7],['Marcelo',9],['Pepe',8],
+  ['Rio Ferdinand',9],['Nemanja Vidić',9],['Gary Neville',8],['Denis Irwin',8],
+  ['Vincent Kompany',9],['Pablo Zabaleta',8],['Alessandro Nesta',9],['Javier Zanetti',9],
+  ['Marco Materazzi',7],['Tony Adams',8],['Lauren',7],['John Terry',8],['Branislav Ivanović',7],
+  ['Ledley King',8],['Kyle Naughton',5]
+ ],
+ MID:[
+  ['Luka Modrić',9],['Guti',7],['Claude Makélélé',8],['Sergio Busquets',9],
+  ['Deco',8],['Rivaldo',9],['Paul Pogba',7],['Roy Keane',9],['Ryan Giggs',9],
+  ['David Silva',9],['Yaya Touré',9],['Clarence Seedorf',9],['Gennaro Gattuso',8],
+  ['Kaká',9],['Esteban Cambiasso',8],['Wesley Sneijder',8],['Patrick Vieira',9],
+  ['Robert Pirès',8],['Cesc Fàbregas',8],['Michael Essien',8],['Eden Hazard',9],
+  ['Luka Modric',8],['Rafael van der Vaart',7],['Mousa Dembélé',7]
+ ],
+ ATT:[
+  ['Raúl',9],['Cristiano Ronaldo',10],['Karim Benzema',9],['Alfredo Di Stéfano',10],
+  ['Lionel Messi',10],['Samuel Eto\'o',9],['Luis Suárez',9],['Neymar',9],
+  ['Wayne Rooney',9],['Eric Cantona',9],['Ruud van Nistelrooy',9],['Andy Cole',8],
+  ['Sergio Agüero',10],['Carlos Tevez',8],['Andriy Shevchenko',9],['Marco van Basten',10],
+  ['Filippo Inzaghi',8],['Ronaldo Nazário',10],['Diego Milito',8],['Dennis Bergkamp',9],
+  ['Ian Wright',8],['Frank Lampard',9],['Gianfranco Zola',8],['Harry Kane',9],
+  ['Gareth Bale',9],['Jürgen Klinsmann',8]
+ ]
+};
+
+// club + nation for every legend above
+const FOOTBALL_LEGEND_META = {
+ 'Santiago Cañizares':['Real Madrid','Spain'],'Claudio Bravo':['Barcelona','Chile'],
+ 'Víctor Valdés':['Barcelona','Spain'],'Peter Schmeichel':['Manchester United','Denmark'],
+ 'Joe Hart':['Manchester City','England'],'Dino Zoff':['Inter Milan','Italy'],
+ 'Walter Zenga':['Inter Milan','Italy'],'Julio César':['Inter Milan','Brazil'],
+ 'David de Gea':['Manchester United','Spain'],'Jens Lehmann':['Arsenal','Germany'],
+ 'Hugo Lloris':['Tottenham Hotspur','France'],
+ 'Carles Puyol':['Barcelona','Spain'],'Gerard Piqué':['Barcelona','Spain'],
+ 'Dani Alves':['Barcelona','Brazil'],'Éric Abidal':['Barcelona','France'],
+ 'Fernando Hierro':['Real Madrid','Spain'],'Michel Salgado':['Real Madrid','Spain'],
+ 'Marcelo':['Real Madrid','Brazil'],'Pepe':['Real Madrid','Portugal'],
+ 'Rio Ferdinand':['Manchester United','England'],'Nemanja Vidić':['Manchester United','Serbia'],
+ 'Gary Neville':['Manchester United','England'],'Denis Irwin':['Manchester United','Ireland'],
+ 'Vincent Kompany':['Manchester City','Belgium'],'Pablo Zabaleta':['Manchester City','Argentina'],
+ 'Alessandro Nesta':['AC Milan','Italy'],'Javier Zanetti':['Inter Milan','Argentina'],
+ 'Marco Materazzi':['Inter Milan','Italy'],'Tony Adams':['Arsenal','England'],
+ 'Lauren':['Arsenal','Cameroon'],'John Terry':['Chelsea','England'],
+ 'Branislav Ivanović':['Chelsea','Serbia'],'Ledley King':['Tottenham Hotspur','England'],
+ 'Kyle Naughton':['Tottenham Hotspur','England'],
+ 'Luka Modrić':['Real Madrid','Croatia'],'Guti':['Real Madrid','Spain'],
+ 'Claude Makélélé':['Real Madrid','France'],'Sergio Busquets':['Barcelona','Spain'],
+ 'Deco':['Barcelona','Portugal'],'Rivaldo':['Barcelona','Brazil'],
+ 'Paul Pogba':['Manchester United','France'],'Roy Keane':['Manchester United','Ireland'],
+ 'Ryan Giggs':['Manchester United','Wales'],'David Silva':['Manchester City','Spain'],
+ 'Yaya Touré':['Manchester City','Ivory Coast'],'Clarence Seedorf':['AC Milan','Netherlands'],
+ 'Gennaro Gattuso':['AC Milan','Italy'],'Kaká':['AC Milan','Brazil'],
+ 'Esteban Cambiasso':['Inter Milan','Argentina'],'Wesley Sneijder':['Inter Milan','Netherlands'],
+ 'Patrick Vieira':['Arsenal','France'],'Robert Pirès':['Arsenal','France'],
+ 'Cesc Fàbregas':['Arsenal','Spain'],'Michael Essien':['Chelsea','Ghana'],
+ 'Eden Hazard':['Chelsea','Belgium'],'Luka Modric':['Tottenham Hotspur','Croatia'],
+ 'Rafael van der Vaart':['Tottenham Hotspur','Netherlands'],'Mousa Dembélé':['Tottenham Hotspur','Belgium'],
+ 'Raúl':['Real Madrid','Spain'],'Cristiano Ronaldo':['Real Madrid','Portugal'],
+ 'Karim Benzema':['Real Madrid','France'],'Alfredo Di Stéfano':['Real Madrid','Argentina'],
+ 'Lionel Messi':['Barcelona','Argentina'],"Samuel Eto'o":['Barcelona','Cameroon'],
+ 'Luis Suárez':['Barcelona','Uruguay'],'Neymar':['Barcelona','Brazil'],
+ 'Wayne Rooney':['Manchester United','England'],'Eric Cantona':['Manchester United','France'],
+ 'Ruud van Nistelrooy':['Manchester United','Netherlands'],'Andy Cole':['Manchester United','England'],
+ 'Sergio Agüero':['Manchester City','Argentina'],'Carlos Tevez':['Manchester City','Argentina'],
+ 'Andriy Shevchenko':['AC Milan','Ukraine'],'Marco van Basten':['AC Milan','Netherlands'],
+ 'Filippo Inzaghi':['AC Milan','Italy'],'Diego Milito':['Inter Milan','Argentina'],
+ 'Dennis Bergkamp':['Arsenal','Netherlands'],'Ian Wright':['Arsenal','England'],
+ 'Gianfranco Zola':['Chelsea','Italy'],'Gareth Bale':['Tottenham Hotspur','Wales'],
+ 'Jürgen Klinsmann':['Tottenham Hotspur','Germany']
+};
+
+// Kit colours for the jersey rendering on the results pitch.
+// [primary, secondary, stripe?]
+const CLUB_KITS = {
+ 'Real Madrid':['#FFFFFF','#00529F',false],
+ 'Barcelona':['#A50044','#004D98',true],
+ 'Manchester City':['#6CABDD','#1C2C5B',false],
+ 'Manchester United':['#DA291C','#000000',false],
+ 'AC Milan':['#FB090B','#000000',true],
+ 'Inter Milan':['#0068A8','#000000',true],
+ 'Arsenal':['#EF0107','#FFFFFF',false],
+ 'Chelsea':['#034694','#FFFFFF',false],
+ 'Tottenham Hotspur':['#FFFFFF','#132257',false],
+ 'Liverpool':['#C8102E','#00B2A9',false],
+ 'Bayern Munich':['#DC052D','#0066B2',false],
+ 'Paris Saint-Germain':['#004170','#DA291C',false],
+ 'Juventus':['#FFFFFF','#000000',true],
+ 'Napoli':['#12A0D7','#FFFFFF',false],
+ 'Atlético Madrid':['#CB3524','#FFFFFF',true],
+ 'Newcastle United':['#241F20','#FFFFFF',true],
+ 'Aston Villa':['#95BFE5','#670E36',false],
+ 'Borussia Dortmund':['#FDE100','#000000',false],
+ 'Bayer Leverkusen':['#E32221','#000000',false],
+ 'Porto':['#00428C','#FFFFFF',true],
+ 'Fulham':['#FFFFFF','#000000',false],
+ 'Al-Hilal':['#0E4CFD','#FFFFFF',false],
+ 'Santos':['#FFFFFF','#000000',false],
+ 'Vélez Sarsfield':['#FFFFFF','#0B4EA2',false]
+};
+function kitFor(name){
+  const club = clubOf(name);
+  return (club && CLUB_KITS[club]) || ['#F5EFE3','#2B2620',false];
+}
+
+// Rivalry drafts: same engine as the 5-a-side draft, but the pool is limited
+// to two rival clubs. Built programmatically from FOOTBALL_META so they stay
+// in sync with the player pool automatically.
+const RIVALRIES = {
+  rivals_clasico:   { name:'El Clásico Draft',      emoji:'⚡', clubs:['Real Madrid','Barcelona'] },
+  rivals_manchester:{ name:'Manchester Derby Draft',emoji:'⚡', clubs:['Manchester City','Manchester United'] },
+  rivals_milan:     { name:'Milan Derby Draft',     emoji:'⚡', clubs:['AC Milan','Inter Milan'] },
+  rivals_london:    { name:'London Derby Draft',    emoji:'⚡', clubs:['Arsenal','Chelsea','Tottenham Hotspur'] }
+};
+function buildRivalryPool(clubs){
+  const pool = {};
+  FOOTBALL_CATS.forEach(cat => {
+    const all = (FOOTBALL.pool[cat]||[])
+      .concat(FOOTBALL.icons[cat]||[])
+      .concat(FOOTBALL_LEGENDS[cat]||[]);
+    const seen = {};
+    pool[cat] = all.filter(p => {
+      if (seen[p[0]]) return false;            // a few names appear in both banks
+      const m = FOOTBALL_META[p[0]] || FOOTBALL_LEGEND_META[p[0]];
+      if (!m || clubs.indexOf(m[0]) === -1) return false;
+      seen[p[0]] = true;
+      return true;
+    }).map(p => [p[0], p[1]]);
+  });
+  return pool;
+}
+
+Object.keys(RIVALRIES).forEach(key => {
+  const rv = RIVALRIES[key];
+  CATEGORY_THEMES[key] = {
+    name: rv.name, emoji: rv.emoji, cats: FOOTBALL_CATS, required: FOOTBALL_REQUIRED,
+    pool: buildRivalryPool(rv.clubs), icons: null, rivalClubs: rv.clubs,
+    catLabel:{GK:'⚽ Goalkeeper',DEF:'⚽ Defender',MID:'⚽ Midfielder',ATT:'⚽ Attacker'},
+    catShort:{GK:'GK',DEF:'DEF',MID:'MID',ATT:'ATT'}, resultView:'pitch'
+  };
+});
+
+// Light-touch content filter for anything a player types that other people
+// will see (custom item names, custom themes, nicknames). Normalises common
+// letter-for-symbol substitutions so "f*ck"/"sh1t" don't slip through.
+// Unambiguous — blocked anywhere in the text, including censored spellings
+// like "f*ck" (which normalises to "fck").
+const BLOCKED_SUBSTRINGS = ['fuck','fck','shit','sht','nigger','nigga','nigg',
+ 'faggot','fagot','kike','chink','tranny','whore','slut','molest',
+ 'bitch','btch','bastard','wanker','motherf','cnt'];
+// These sit inside innocent words ("Scunthorpe", "grape", "Spice"), so a token
+// only counts if it STARTS with one of them — that still catches plurals.
+const BLOCKED_PREFIXES = ['cunt','rape','raped','rapes','raping','rapist','wank'];
+// Riskier as substrings (they sit inside innocent words like "Sussex",
+// "analysis", "Scunthorpe"), so these only match as whole words.
+const BLOCKED_WORDS = ['spic','sex','sexy','anal','fag','tits','tit','boob','boobs','dick','dic','cock',
+ 'penis','vagina','pussy','porn','prick','twat','nazi','hitler','kys','retard','retarded'];
+
+function normalizeForFilter(s){
+  return String(s||'').toLowerCase()
+    .replace(/[@4]/g,'a').replace(/[3]/g,'e').replace(/[1!|]/g,'i')
+    .replace(/[0]/g,'o').replace(/[5$]/g,'s').replace(/[7]/g,'t')
+    .replace(/[^a-z]/g,'');
+}
+function normalizeTokens(s){
+  return String(s||'').toLowerCase()
+    .replace(/[@4]/g,'a').replace(/[3]/g,'e').replace(/[1!|]/g,'i')
+    .replace(/[0]/g,'o').replace(/[5$]/g,'s').replace(/[7]/g,'t')
+    .split(/[^a-z]+/).filter(Boolean);
+}
+// Returns null if the text is fine, or a reason string if it should be rejected.
+function checkText(raw, label){
+  const t = String(raw||'').trim();
+  if(!t) return `${label} can't be empty.`;
+  if(t.length > 60) return `${label} is too long (60 characters max).`;
+  const flat = normalizeForFilter(t);
+  for(const w of BLOCKED_SUBSTRINGS){
+    if(flat.indexOf(w) > -1) return `That ${label.toLowerCase()} contains language that isn't allowed — try something else.`;
+  }
+  const tokens = normalizeTokens(t);
+  for(const tok of tokens){
+    if(BLOCKED_WORDS.indexOf(tok) > -1) return `That ${label.toLowerCase()} contains language that isn't allowed — try something else.`;
+    for(const p of BLOCKED_PREFIXES){
+      if(tok.indexOf(p) === 0) return `That ${label.toLowerCase()} contains language that isn't allowed — try something else.`;
+    }
+  }
+  return null;
+}
+
+// How approachable each theme is. 'easy' = anyone can play, 'deep' = rewards
+// knowing the subject. Shown as a badge on the theme chips.
+const THEME_LEVEL = {
+  backyard:'easy', gaming:'easy', vacation:'easy', perfectlife:'easy', fruit:'easy',
+  bunker:'medium', superhero:'medium', videogames:'medium',
+  movies:'deep', tvshows:'deep', music:'deep',
+  sandwich:'easy', pizza:'easy', island:'easy',
+  movie:'medium',
+  football:'deep',
+  rivals_clasico:'deep', rivals_manchester:'deep', rivals_milan:'deep', rivals_london:'deep'
+};
+const LEVEL_LABEL = { easy:'easy', medium:'some knowledge', deep:'deep cut' };
+function themeLevel(key){ return THEME_LEVEL[key] || 'medium'; }
+
+// Themes that describe a physical thing you could photograph. Abstract ones
+// (film credits, football squads, superpowers) generate nonsense, so they
+// don't get the button at all.
+const VISUALISABLE = {
+  backyard: { subject:'a backyard', style:'wide photo of a landscaped backyard, golden hour, realistic' },
+  gaming:   { subject:'a gaming room', style:'wide photo of a gaming setup room interior, LED lighting, realistic' },
+  bunker:   { subject:'an underground bunker', style:'wide photo of an underground survival bunker interior, realistic' },
+  island:   { subject:'a private island', style:'aerial photo of a small private island, tropical, realistic' },
+  pizza:    { subject:'a pizza', style:'overhead food photo of a whole pizza on a wooden board, realistic' },
+  sandwich: { subject:'a sandwich', style:'close-up food photo of a stacked sandwich cut in half, realistic' }
+};
+function canVisualise(themeKey){ return !!VISUALISABLE[themeKey]; }
+// Builds the text prompt from the items someone actually drafted.
+function buildVisualPrompt(themeKey, items){
+  const v = VISUALISABLE[themeKey];
+  if(!v) return null;
+  const names = items.map(it=>it.name.replace(/\s*\(.*?\)\s*/g,'').trim()).filter(Boolean);
+  return `${v.style}. ${v.subject} featuring ${names.join(', ')}. no text, no words, no letters`;
+}
+function visualUrl(prompt, seed){
+  const base = 'https://image.pollinations.ai/prompt/';
+  return base + encodeURIComponent(prompt) +
+    `?width=768&height=512&nologo=true&seed=${seed}`;
+}
+
+/* Stable numeric IDs. Assigned once in a fixed traversal order so the client
+   and the server always agree on which number means which item. */
+const ITEM_BY_ID = {};
+const ID_BY_NAME = {};
+(function assignItemIds(){
+  let n = 0;
+  const add = (name, r, themeKey, cat) => {
+    n++;
+    ITEM_BY_ID[n] = { id:n, name, r, themeKey, cat };
+    ID_BY_NAME[themeKey + '|' + name] = n;
+  };
+  Object.keys(THEMES).forEach(k => THEMES[k].items.forEach(it => add(it[0], it[1], k, null)));
+  Object.keys(CATEGORY_THEMES).forEach(k => {
+    const t = CATEGORY_THEMES[k];
+    t.cats.forEach(c => {
+      (t.pool[c]||[]).forEach(it => add(it[0], it[1], k, c));
+      if (t.icons && t.icons[c]) t.icons[c].forEach(it => add(it[0], it[1], k, c));
+    });
+  });
+})();
+function itemIdFor(name, themeKey){ return ID_BY_NAME[themeKey + '|' + name]; }
+function footballMeta(name){ return FOOTBALL_META[name] || FOOTBALL_LEGEND_META[name] || null; }
+function clubOf(name){ const m = footballMeta(name); return m ? m[0] : null; }
+function nationOf(name){ const m = footballMeta(name); return m ? m[1] : null; }
+function itemById(id){ return ITEM_BY_ID[parseInt(id,10)]; }
+/* END GAME DATA */
+
+/* ============ UTILS ============ */
+const $ = id => document.getElementById(id);
+const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function stars(r){ const full=Math.round(r/2); return '★'.repeat(full)+'☆'.repeat(5-full)+' ('+r+'/10)'; }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============ SOUND (Web Audio, synthesized) ============ */
+let actx = null;
+function audioCtx(){ if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+function playTone(freq, dur, type, gainStart){
+  const ctx = audioCtx(); if(!ctx) return;
+  const osc = ctx.createOscillator(); const gain = ctx.createGain();
+  osc.type = type||'sine'; osc.frequency.value = freq;
+  gain.gain.setValueAtTime(gainStart||0.2, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+dur);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(); osc.stop(ctx.currentTime+dur);
+}
+function sndGavel(){ const ctx=audioCtx(); if(!ctx) return; playTone(90,0.28,'square',0.25); setTimeout(()=>playTone(70,0.2,'square',0.18),90); }
+function sndCoin(){ playTone(880,0.09,'triangle',0.18); setTimeout(()=>playTone(1320,0.12,'triangle',0.18),80); setTimeout(()=>playTone(1760,0.16,'triangle',0.15),160); }
+function sndClick(){ playTone(440,0.05,'sine',0.08); }
+
+/* ============ CONFETTI (DOM/CSS, no library) ============ */
+function confettiBurst(){
+  const colors=['#C1543C','#c99a3f','#4c7a5a','#2B2620','#EAE1CE'];
+  for(let i=0;i<40;i++){
+    const p = document.createElement('div');
+    p.className='confetti-piece';
+    p.style.left = (40+Math.random()*20)+'vw';
+    p.style.background = pick(colors);
+    p.style.transform = `rotate(${rnd(0,360)}deg)`;
+    const dur = 1.1+Math.random()*0.9;
+    const drift = (Math.random()-0.5)*220;
+    p.style.transition = `transform ${dur}s cubic-bezier(.25,.46,.45,.94), top ${dur}s linear, opacity ${dur}s linear`;
+    document.body.appendChild(p);
+    requestAnimationFrame(()=>{
+      p.style.top = '104vh';
+      p.style.transform = `translateX(${drift}px) rotate(${rnd(180,900)}deg)`;
+      p.style.opacity='0.15';
+    });
+    setTimeout(()=>p.remove(), dur*1000+150);
+  }
+}
+
+/* ============ SCREEN NAV ============ */
+function showScreen(id){
+  const target = $(id);
+  if(target.classList.contains('active')) return; // already showing — don't yank scroll position
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  target.classList.add('active');
+  window.scrollTo(0,0);
+}
+
+/* ============ GLOBAL APP STATE ============ */
+const App = {
+  mode: null,          // 'practice' | 'online'
+  hostMode: null,      // '2p' | '3p'  (online)
+  role: null,          // 'creator' | 'joiner' | 'host' (online)
+  nickname: '',
+  themeKey: null,       // key into THEMES or CATEGORY_THEMES, or 'custom'
+  customTheme: null,    // {name, items:[[name,rating],...]}
+  roomCode: null,
+  pollTimer: null,
+  practice: null        // practice session object
+};
+
+/* ============ HOME SCREEN: theme grid ============ */
+// The home screen outgrew a flat list, so themes live in packs now.
+const THEME_PACKS = [
+  { key:'classics', name:'Classics',  emoji:'🏡', blurb:'pick any 5',
+    themes:['backyard','gaming','bunker','vacation','perfectlife'] },
+  { key:'food',     name:'Food',      emoji:'🍕', blurb:'build a plate',
+    themes:['sandwich','pizza','fruit'] },
+  { key:'media',    name:'Screen & Sound', emoji:'🎬', blurb:'films, TV, music, games',
+    themes:['movie','movies','tvshows','music','videogames'] },
+  { key:'football', name:'Football',  emoji:'⚽', blurb:'squads & rivalries',
+    themes:['football','rivals_clasico','rivals_manchester','rivals_milan','rivals_london'] },
+  { key:'worlds',   name:'Big Ideas', emoji:'🏝️', blurb:'islands, powers, lives',
+    themes:['island','superhero'] }
+];
+function allThemeMeta(key){
+  if(CATEGORY_THEMES[key]) return CATEGORY_THEMES[key];
+  return THEMES[key];
+}
+function openPack(packKey){
+  const pack = THEME_PACKS.find(p=>p.key===packKey);
+  if(!pack) return;
+  App.openPack = packKey;
+  $('pack-label').classList.add('hidden');
+  $('pack-grid').classList.add('hidden');
+  $('pack-open').classList.remove('hidden');
+  $('pack-open-label').textContent = `${pack.emoji} ${pack.name} — ${pack.blurb}`;
+  const grid = $('theme-grid');
+  grid.innerHTML = '';
+  pack.themes.forEach(key=>{
+    const t = allThemeMeta(key);
+    if(!t) return;
+    const isCat = !!CATEGORY_THEMES[key];
+    const lvl = themeLevel(key);
+    const chip = document.createElement('div');
+    chip.className = 'theme-chip'; chip.dataset.key = key;
+    chip.innerHTML = `<span class="emoji">${t.emoji}</span><span class="name">${escapeHtml(t.name)}</span>` +
+      `<span class="lvl lvl-${lvl}">${isCat ? 'slots · ' : ''}${LEVEL_LABEL[lvl]}</span>`;
+    chip.onclick = ()=>selectTheme(key);
+    grid.appendChild(chip);
+  });
+}
+function closePack(){
+  App.openPack = null;
+  $('pack-open').classList.add('hidden');
+  $('pack-label').classList.remove('hidden');
+  $('pack-grid').classList.remove('hidden');
+}
+function renderThemeGrid(){
+  const fill = (gridId, entries) => {
+    const grid = $(gridId);
+    grid.innerHTML='';
+    entries.forEach(([key,t])=>{
+      const chip = document.createElement('div');
+      chip.className='theme-chip'; chip.dataset.key=key;
+      const lvl = themeLevel(key);
+      chip.innerHTML = `<span class="emoji">${t.emoji}</span><span class="name">${escapeHtml(t.name)}</span>` +
+        `<span class="lvl lvl-${lvl}">${LEVEL_LABEL[lvl]}</span>`;
+      chip.onclick = ()=>selectTheme(key);
+      grid.appendChild(chip);
+    });
+  };
+  const grid = $('pack-grid');
+  grid.innerHTML = '';
+  THEME_PACKS.forEach(pack=>{
+    const chip = document.createElement('div');
+    chip.className = 'theme-chip';
+    chip.innerHTML = `<span class="emoji">${pack.emoji}</span><span class="name">${escapeHtml(pack.name)}</span>` +
+      `<span class="lvl" style="color:var(--ink-soft);">${pack.themes.length} themes</span>`;
+    chip.onclick = ()=>{ sndClick(); openPack(pack.key); };
+    grid.appendChild(chip);
+  });
+  $('btn-pack-back').onclick = ()=>{ sndClick(); closePack(); };
+}
+function selectTheme(key){
+  App.themeKey = key; App.customTheme = null;
+  document.querySelectorAll('.theme-chip').forEach(c=>c.classList.toggle('selected', c.dataset.key===key));
+  $('custom-theme-input').value='';
+  sndClick();
+}
+function useCustomTheme(mode){
+  const raw = $('custom-theme-input').value.trim();
+  if(!raw){ alert('Type a topic first.'); return; }
+  App.customTheme = { name: raw, items: generateCustomItems(raw, mode) };
+  App.themeKey = 'custom';
+  document.querySelectorAll('.theme-chip').forEach(c=>c.classList.remove('selected'));
+  sndClick();
+  $('custom-theme-input').style.borderColor='var(--rust)';
+  ['space','things'].forEach(k=>{
+    $('btn-use-custom-'+k).classList.toggle('btn-primary', k===mode);
+    $('btn-use-custom-'+k).classList.toggle('btn-secondary', k!==mode);
+  });
+}
+function titleCase(s){ return s.replace(/\w\S*/g, t=>t[0].toUpperCase()+t.slice(1)); }
+function generateCustomItems(raw, mode){
+  const t = raw.trim(); const T = titleCase(t); const low = t.toLowerCase();
+  if(mode === 'space'){
+    // things to put IN the place, plus a couple of theme-flavoured extras
+    const picks = shuffle(CUSTOM_SPACE_ITEMS).slice(0,18).map(x=>[x[0], x[1]]);
+    picks.push([`A custom-built ${low} sign`, rnd(4,6)]);
+    picks.push([`${T} merch for visitors`, rnd(3,5)]);
+    return shuffle(picks);
+  }
+  const items = [];
+  shuffle(CUSTOM_ADJ).slice(0,6).forEach(tpl=> items.push([tpl.replace('{T}',T), rnd(6,9)]));
+  shuffle(CUSTOM_FEAT).slice(0,7).forEach(tpl=> items.push([tpl.replace('{T}',T), rnd(6,9)]));
+  shuffle(CUSTOM_FILLER).slice(0,7).forEach(tpl=> items.push([tpl.replace('{t}',low), rnd(3,5)]));
+  return items;
+}
+function currentThemeObj(){
+  if(CATEGORY_THEMES[App.themeKey]){ const t=CATEGORY_THEMES[App.themeKey]; return {emoji:t.emoji, name:t.name, categoryTheme:App.themeKey}; }
+  if(App.themeKey==='custom') return {emoji:'✏️', name:App.customTheme.name, items:App.customTheme.items};
+  return THEMES[App.themeKey];
+}
+
+/* ============ NICKNAME SCREEN ============ */
+function goNickname(purpose){
+  // purpose: 'create2p' | 'create3p' | 'join'
+  App._nickPurpose = purpose;
+  $('nickname-input').value = App.nickname || '';
+  $('join-code-wrap').classList.toggle('hidden', purpose!=='join');
+  $('host-mode-wrap').classList.toggle('hidden', purpose!=='choose');
+  let ctx = '';
+  if(purpose==='join') ctx = 'Enter the room code your friend shared, then pick a nickname.';
+  else if(purpose==='choose') ctx = 'Choose how many players, then pick a nickname.';
+  $('nickname-context').textContent = ctx;
+  showScreen('screen-nickname');
+}
+$('btn-create-room').onclick = ()=>{
+  if(!App.themeKey){ alert('Pick a theme first!'); return; }
+  App._nickPurpose='choose'; App.hostMode=null;
+  goNickname('choose');
+};
+$('btn-join-room').onclick = ()=> goNickname('join');
+App.opponentId = 'ivy';
+function renderOpponents(){
+  const wrap = $('opponent-list');
+  wrap.innerHTML = AI_OPPONENTS.map(o=>`
+    <div class="opp-row${o.id===App.opponentId?' picked':''}" data-id="${o.id}">
+      <span class="opp-emoji">${o.emoji}</span>
+      <span class="opp-text"><b>${o.name}</b><span class="opp-tag">${escapeHtml(o.tag)}</span></span>
+      <span class="lvl lvl-${o.level==='medium'?'medium':o.level}">${o.level}</span>
+    </div>`).join('');
+  wrap.querySelectorAll('.opp-row').forEach(el=>{
+    el.onclick = ()=>{ App.opponentId = el.dataset.id; sndClick(); renderOpponents(); };
+  });
+}
+
+$('btn-practice').onclick = ()=>{
+  if(!App.themeKey){ alert('Pick a theme first!'); return; }
+  App.mode='practice';
+  startPracticeGame();
+};
+$('btn-mode-2p').onclick = ()=>{ App.hostMode='2p'; markHostModeBtn('2p'); };
+$('btn-mode-3p').onclick = ()=>{ App.hostMode='3p'; markHostModeBtn('3p'); };
+$('btn-mode-2v2').onclick = ()=>{ App.hostMode='2v2'; markHostModeBtn('2v2'); };
+function markHostModeBtn(m){
+  ['2p','3p','2v2'].forEach(k=>{
+    $('btn-mode-'+k).classList.toggle('btn-primary', m===k);
+    $('btn-mode-'+k).classList.toggle('btn-secondary', m!==k);
+  });
+}
+$('btn-nickname-back').onclick = ()=> showScreen('screen-home');
+$('btn-nickname-continue').onclick = async ()=>{
+  const nick = $('nickname-input').value.trim().slice(0,16);
+  if(!nick){ alert('Please enter a nickname.'); return; }
+  const btn = $('btn-nickname-continue');
+  if(btn.disabled) return; // guard against double-tap / slow-network double-submit
+  btn.disabled = true; const origLabel = btn.textContent; btn.textContent = 'Joining…';
+  App.nickname = nick;
+  App.mode='online';
+  try{
+    if(App._nickPurpose==='join'){
+      const code = $('join-code-input').value.trim().toUpperCase();
+      if(code.length!==5){ alert('Room code should be 5 characters.'); return; }
+      App.roomCode = code; App.role='joiner';
+      await joinRoom();
+    } else {
+      if(!App.hostMode){ alert('Pick 2-Player, 3-Player, or 2v2 Teams.'); return; }
+      App.role = App.hostMode==='3p' ? 'host' : 'creator';
+      await createRoom();
+    }
+  } finally {
+    btn.disabled = false; btn.textContent = origLabel;
+  }
+};
+
+/* ============ NETWORKING ============ */
+async function api(action, payload){
+  let res;
+  try{
+    res = await fetch('/api/room', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(Object.assign({action, roomCode: App.roomCode}, payload||{}))
+    });
+  }catch(e){
+    throw new Error('Network error — check your connection ('+(e.message||'fetch failed')+')');
+  }
+  const raw = await res.text();
+  let data;
+  try{ data = raw ? JSON.parse(raw) : {}; }
+  catch(e){ data = null; }
+  if(!res.ok){
+    const msg = (data && (data.error || data.errorMessage || data.message))
+      || `Server error (HTTP ${res.status})${raw ? ': '+raw.slice(0,140) : ''}`;
+    throw new Error(msg);
+  }
+  return data || {};
+}
+function themePayload(){
+  if(App.themeKey==='football') return {themeKey:'football'};
+  if(App.themeKey==='custom') return {themeKey:'custom', customTheme:App.customTheme};
+  return {themeKey:App.themeKey};
+}
+const SESSION_KEY = 'dr4fter_session';
+function rememberSession(){
+  try{ localStorage.setItem(SESSION_KEY, JSON.stringify({ code: App.roomCode, nickname: App.nickname, at: Date.now() })); }catch(e){}
+}
+function forgetSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+function loadSession(){
+  try{
+    const s = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    if(!s || !s.code || !s.nickname) return null;
+    if(Date.now() - (s.at||0) > 12*60*60*1000) return null; // rooms only last 12h
+    return s;
+  }catch(e){ return null; }
+}
+async function createRoom(){
+  try{
+    const data = await api('create', { nickname: App.nickname, hostMode: App.hostMode, theme: themePayload() });
+    App.roomCode = data.room.code;
+    rememberSession();
+    enterLobby(data.room);
+    startPolling();
+  }catch(e){ alert('Could not create room: '+e.message); showScreen('screen-home'); }
+}
+async function joinRoom(){
+  try{
+    const data = await api('join', { nickname: App.nickname });
+    rememberSession();
+    // a rejoin can land mid-draft or even at results — go wherever the room is
+    if(data.room.phase === 'lobby') enterLobby(data.room);
+    else renderRoomState(data.room);
+    startPolling();
+  }catch(e){ alert('Could not join room: '+e.message); showScreen('screen-home'); }
+}
+function startPolling(){
+  if(App.pollTimer) clearInterval(App.pollTimer);
+  App.pollSeq = 0; App.lastRenderedSeq = 0; App.pollInFlight = false;
+  App.pollTimer = setInterval(pollRoom, 1000);
+  pollRoom();
+}
+function stopPolling(){ if(App.pollTimer){ clearInterval(App.pollTimer); App.pollTimer=null; } }
+async function pollRoom(){
+  if(App.pollInFlight) return; // don't stack requests if the network is slow
+  App.pollInFlight = true;
+  const seq = ++App.pollSeq;
+  try{
+    const data = await api('state', {});
+    if(data.options) App.hostPickOptions = data.options;
+    applyRoomIfNewest(seq, data.room);
+  }catch(e){
+    // an expired or missing room won't fix itself — stop polling and say so
+    if(/has expired|no room with code/i.test(e.message||'')){
+      stopPolling(); App.roomCode = null; App.mode = null; forgetSession();
+      alert(e.message);
+      showScreen('screen-home');
+    }
+    /* anything else is a transient hiccup — ignore and retry next tick */
+  }
+  finally{ App.pollInFlight = false; }
+}
+// Responses can arrive out of order on a slow connection. Tag each request
+// when it's sent and never let an older response overwrite a newer one.
+function applyRoomIfNewest(seq, room){
+  if(seq < App.lastRenderedSeq) return;
+  App.lastRenderedSeq = seq;
+  renderRoomState(room);
+}
+
+/* ============ LOBBY ============ */
+function enterLobby(room){
+  showScreen('screen-lobby');
+  $('lobby-code').textContent = room.code;
+  $('lobby-plural').textContent = (room.hostMode==='3p' || room.hostMode==='2v2') ? 's' : '';
+  $('lobby-role-note').textContent = App.role==='host' ? "You're hosting — you'll watch, not bid."
+    : room.hostMode==='2v2' ? "You'll share a team with one other player — you both have to agree before a raise or pass goes through."
+    : App.role==='creator' ? "Waiting for someone to join…" : "You're in!";
+  App.onlineBidLogSeen = 0;
+  App.lobbySeenNicks = null; // reset join-toast tracking for a fresh lobby
+  renderLobbyPlayers(room);
+}
+function renderLobbyPlayers(room){
+  const wrap = $('lobby-players');
+  const curNicks = room.players.map(p=>p.nickname);
+  if(App.lobbySeenNicks){
+    curNicks.forEach(n=>{
+      if(!App.lobbySeenNicks.includes(n) && n!==App.nickname) showJoinedToast(n);
+    });
+  }
+  App.lobbySeenNicks = curNicks;
+  if(room.hostMode==='2v2'){
+    const teamHTML = teamIdx => room.players.filter(p=>p.team===teamIdx)
+      .map(p=>`<div style="padding:4px 0;">👤 <b>${escapeHtml(p.nickname)}</b></div>`).join('')
+      || '<div style="padding:4px 0; color:var(--ink-soft); font-style:italic;">— open seat —</div>';
+    wrap.innerHTML = `
+      <div class="player-card" style="text-align:left; margin-bottom:8px;"><b>Team A</b>${teamHTML(0)}</div>
+      <div class="player-card" style="text-align:left;"><b>Team B</b>${teamHTML(1)}</div>`;
+  } else {
+    wrap.innerHTML = room.players.map(p=>`<div style="padding:6px;">👤 <b>${escapeHtml(p.nickname)}</b> ${p.role==='host'?'<span class="badge">host</span>':''}</div>`).join('');
+  }
+  const needed = room.hostMode==='3p' ? 3 : room.hostMode==='2v2' ? 4 : 2;
+  $('lobby-waiting').textContent = room.players.length < needed ? `Waiting for players to join… (${room.players.length}/${needed})` : 'Everyone is in — starting…';
+}
+function showJoinedToast(nick){
+  const el = document.createElement('div');
+  el.className = 'free-toast variant-joined';
+  el.innerHTML = `👋<span class="sub">${escapeHtml(nick)} joined the room</span>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  setTimeout(()=>el.remove(), 1500);
+}
+$('btn-lobby-leave').onclick = ()=>{ stopPolling(); App.roomCode=null; forgetSession(); showScreen('screen-home'); };
+function joinUrlFor(code){ return location.origin + '/?join=' + code; }
+$('btn-show-qr').onclick = ()=>{
+  const wrap = $('qr-wrap'), box = $('qr-box'), btn = $('btn-show-qr');
+  sndClick();
+  if(!wrap.classList.contains('hidden')){
+    wrap.classList.add('hidden'); btn.textContent = '📱 Show QR code'; return;
+  }
+  const code = App.roomCode || $('lobby-code').textContent;
+  const url = joinUrlFor(code);
+  box.innerHTML = '';
+  try{
+    if(typeof QRCode === 'undefined') throw new Error('QR library unavailable');
+    new QRCode(box, { text: url, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.M });
+    $('qr-caption').textContent = 'Point a camera at this to join';
+  }catch(e){
+    // CDN blocked or offline — the link still works, so show it as text
+    box.innerHTML = `<div style="font-family:'SF Mono',monospace; font-size:12px; color:#2B2620; word-break:break-all; line-height:1.4;">${escapeHtml(url)}</div>`;
+    $('qr-caption').textContent = "Couldn't draw a QR code — share this link instead";
+  }
+  wrap.classList.remove('hidden');
+  btn.textContent = '📱 Hide QR code';
+};
+$('btn-copy-code').onclick = async ()=>{
+  const code = App.roomCode || $('lobby-code').textContent;
+  const btn = $('btn-copy-code'); const orig = btn.textContent;
+  try{
+    await navigator.clipboard.writeText(code);
+    btn.textContent = '✓ Copied!';
+  }catch(e){
+    btn.textContent = 'Long-press the code to copy';
+  }
+  setTimeout(()=>{ btn.textContent = orig; }, 1600);
+};
+
+/* ============ ROOM STATE RENDER DISPATCH ============ */
+function renderRoomState(room){
+  if(!room) return;
+  App.lastRoom = room; // used by the console's `list` command
+  if(room.phase==='lobby'){ enterLobby(room); return; }
+  if(room.phase==='drafting'){ showScreen('screen-draft'); renderOnlineDraft(room); return; }
+  if(room.phase==='results'){ showScreen('screen-results'); renderResultsFromRoom(room); return; }
+}
+
+/* ============ PRACTICE MODE ENGINE ============ */
+function startPracticeGame(){
+  const theme = currentThemeObj();
+  const catKey = theme.categoryTheme || null;
+  const P = {
+    catThemeKey: catKey,       // null (flat theme) or a CATEGORY_THEMES key
+    gameId: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    opponent: opponentById(App.opponentId),
+    difficulty: (opponentById(App.opponentId).level === 'medium' ? 'normal' : opponentById(App.opponentId).level),
+    themeName: theme.name, themeEmoji: theme.emoji,
+    players: [
+      {nick:'You', budget:20, items:[], human:true},
+      {nick:opponentById(App.opponentId).name, budget:20, items:[], human:false}
+    ],
+    openerIndex: 0,
+    turn: 0,
+    currentLot: null,     // {name, r, cat}
+    currentBid: 0,
+    currentBidder: null,
+    tickerLog: [],
+    bidLog: [],           // {player, name, amount, cat} for flavor stats
+    skipsUsed: 0,
+    mode: 'idle',         // 'contested' | 'solo'
+    soloPlayer: null,
+    itemPool: null,       // for flat themes: shuffled remaining items [name,r]
+    catIdx: 0,
+    candidates: null      // for current category: array of [name,r]
+  };
+  if(catKey){
+    const ct = CATEGORY_THEMES[catKey];
+    P.candidates = buildCategoryCandidateQueue(catKey, ct.cats[0]);
+  } else {
+    P.itemPool = shuffle(theme.items.slice());
+  }
+  App.practice = P;
+  showScreen('screen-draft');
+  $('host-watch-note').classList.add('hidden');
+  drawNextLotPractice();
+}
+
+function buildCategoryCandidateQueue(catThemeKey, cat, exclude){
+  const ct = CATEGORY_THEMES[catThemeKey];
+  const skip = exclude || new Set();
+  const keep = arr => arr.filter(it => !skip.has(it[0]));
+  const poolShuffled = shuffle(keep(ct.pool[cat]));
+  if(!ct.icons){ return poolShuffled; }
+  const iconsAll = shuffle(keep(ct.icons[cat]));
+  const icons3 = iconsAll.slice(0,3);
+  const restIcons = icons3.slice(1);
+  const rest = shuffle(restIcons.concat(poolShuffled));
+  return icons3.length ? [icons3[0]].concat(rest) : rest;
+}
+// Names already on a player's team — a refilled queue must never re-offer them.
+function draftedNamesPractice(P){
+  const out = new Set();
+  P.players.forEach(p => p.items.forEach(it => out.add(it.name)));
+  return out;
+}
+
+function playerNeedsFlat(p){ return p.items.length < 5; }
+function playerNeedsCat(p, cat, requiredMap){ return p.items.filter(it=>it.cat===cat).length < requiredMap[cat]; }
+
+function drawNextLotPractice(){
+  const P = App.practice;
+  if(P.catThemeKey){
+    const ct = CATEGORY_THEMES[P.catThemeKey];
+    // check end of game
+    if(P.catIdx >= ct.cats.length){ return finishPractice(); }
+    let cat = ct.cats[P.catIdx];
+    // advance category if fully satisfied
+    while(P.catIdx < ct.cats.length && !P.players.some(p=>playerNeedsCat(p,cat,ct.required))){
+      P.catIdx++;
+      if(P.catIdx>=ct.cats.length){ return finishPractice(); }
+      cat = ct.cats[P.catIdx];
+      P.candidates = buildCategoryCandidateQueue(P.catThemeKey, cat, draftedNamesPractice(P));
+      P.skipsUsed = 0;
+    }
+    const wanting = [0,1].filter(i=>playerNeedsCat(P.players[i],cat,ct.required));
+    P.pendingNext = P.pendingNext || {};
+    const cand = (P.pendingNext[cat] && P.pendingNext[cat].length)
+      ? P.pendingNext[cat].shift()
+      : drawCategoryCandidate(P, cat);
+    if(!cand){ // queue drained — refill without anything already drafted
+      P.candidates = buildCategoryCandidateQueue(P.catThemeKey, cat, draftedNamesPractice(P));
+      if(!P.candidates.length) return finishPractice(); // category genuinely exhausted
+      return drawNextLotPractice();
+    }
+    P.currentLot = {name:cand[0], r:cand[1], cat:cat};
+    if(wanting.length===2){
+      startContestedLot(P);
+    } else {
+      startSoloLot(P, wanting[0]);
+    }
+  } else {
+    if(P.players.every(p=>p.items.length>=5)){ return finishPractice(); }
+    const wanting = [0,1].filter(i=>playerNeedsFlat(P.players[i]));
+    if(wanting.length===0) return finishPractice();
+    P.pendingNext = P.pendingNext || {};
+    const next = (P.pendingNext._ && P.pendingNext._.length) ? P.pendingNext._.shift() : P.itemPool.shift();
+    if(!next) return finishPractice();
+    P.currentLot = {name:next[0], r:next[1], cat:null};
+    if(wanting.length===2){
+      startContestedLot(P);
+    } else {
+      startSoloLot(P, wanting[0]);
+    }
+  }
+  renderPracticeDraft();
+  triggerAiIfNeeded();
+}
+function triggerAiIfNeeded(){
+  const P = App.practice;
+  if(!P || !P.currentLot) return;
+  if(P.mode==='contested' && P.turn===1){
+    setTimeout(aiTakeTurn, 700);
+  } else if(P.mode==='solo' && P.soloPlayer===1){
+    setTimeout(aiSoloClaim, 700);
+  }
+}
+function aiSoloClaim(){
+  const P = App.practice;
+  if(!P || P.mode!=='solo' || P.soloPlayer!==1) return;
+  const ai = P.players[1];
+  const amount = ai.budget===0 ? 0 : 1;
+  resolveLotWinner(P, 1, amount);
+}
+function drawCategoryCandidate(P, cat){
+  if(!P.candidates || !P.candidates.length) return null;
+  return P.candidates.shift();
+}
+
+function startContestedLot(P){
+  P.mode='contested';
+  P.currentBid = 0; P.currentBidder = null;
+  P.turn = P.openerIndex;
+  P.tickerLog = [];
+  P.skipsUsed = 0;
+  P.passStreak = 0;
+}
+function unsoldLot(P){
+  if(P.currentLot){
+    if(P.catThemeKey){ P.candidates = P.candidates||[]; P.candidates.push([P.currentLot.name, P.currentLot.r]); }
+    else { P.itemPool.push([P.currentLot.name, P.currentLot.r]); }
+  }
+  P.mode='idle'; P.currentLot=null;
+  P.openerIndex = 1-P.openerIndex;
+  setTimeout(()=>drawNextLotPractice(), 400);
+}
+function startSoloLot(P, playerIdx){
+  P.mode='solo';
+  P.soloPlayer = playerIdx;
+  P.currentBid = 0; P.currentBidder = null;
+  P.skipsUsed = 0;
+  P.tickerLog = [];
+}
+
+function resolveLotWinner(P, winnerIdx, amount){
+  const player = P.players[winnerIdx];
+  player.budget -= amount;
+  const lotName = P.currentLot.name;
+  const rec = {name:lotName, r:P.currentLot.r, cat:P.currentLot.cat, paid:amount};
+  player.items.push(rec);
+  P.bidLog.push({player:winnerIdx, name:lotName, amount, cat:P.currentLot.cat});
+  recordHumanBidToServer(winnerIdx, P);
+  sndGavel();
+  setTimeout(()=>showItemWonToast(player.nick, lotName, amount), 260);
+  let delay;
+  if(amount<=2){
+    setTimeout(()=>{ sndCoin(); confettiBurst(); }, 260);
+    delay = 1700;
+  } else {
+    delay = 1300;
+  }
+  P.openerIndex = 1-P.openerIndex;
+  P.mode='idle'; P.currentLot=null;
+  setTimeout(()=>drawNextLotPractice(), delay);
+}
+function showItemWonToast(nick, itemName, amount){
+  const el = document.createElement('div');
+  let variant, headline, priceLine;
+  if(amount===0){ variant='variant-free'; headline='🎉 FREE!'; priceLine='for nothing'; }
+  else if(amount<=2){ variant='variant-steal'; headline='💰 Steal!'; priceLine=`for just $${amount}`; }
+  else { variant='variant-sold'; headline='✓ Sold!'; priceLine=`for $${amount}`; }
+  el.className = 'free-toast ' + variant;
+  el.innerHTML = `${headline}<span class="sub">${escapeHtml(nick)} got ${escapeHtml(itemName)} ${priceLine}</span>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  const life = variant==='variant-sold' ? 1300 : 1750;
+  setTimeout(()=>el.remove(), life);
+}
+function recordHumanBidToServer(winnerIdx, P){
+  if(winnerIdx!==0) return; // only record human (You) raises
+  try{
+    // fire-and-forget: never awaited, and failures are ignored
+    fetch('/api/ai-prefs', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'record', itemKey: (P.currentLot.cat||P.themeName)+'::'+P.currentLot.name, amount: P.currentBid})
+    }).catch(()=>{});
+  }catch(e){}
+}
+
+/* human actions */
+function humanRaise(amount){
+  const P = App.practice;
+  if(P.mode==='contested'){
+    P.currentBid = amount; P.currentBidder = 0;
+    P.passStreak = 0;
+    P.tickerLog.push(`You: $${amount}`);
+    P.turn = 1;
+    renderPracticeDraft();
+    setTimeout(aiTakeTurn, 550);
+  } else if(P.mode==='solo'){
+    resolveLotWinner(P, 0, amount);
+  }
+}
+// Both declined with no bid. If neither can afford the $1 minimum, passing is
+// forced rather than chosen — leaving the lot unsold would repeat every round
+// until the pool emptied and players finished under the 5-item cap.
+function resolveForcedPass(P, turnIdx){
+  if(P.players.every(p=>p.budget<1)) return resolveLotWinner(P, turnIdx, 0);
+  return unsoldLot(P);
+}
+function humanPass(){
+  const P = App.practice;
+  if(P.mode!=='contested') return;
+  if(P.currentBidder===null){
+    P.tickerLog.push('You: pass');
+    P.passStreak = (P.passStreak||0)+1;
+    if(P.passStreak>=2){ return resolveForcedPass(P, 0); }
+    P.turn = 1;
+    renderPracticeDraft();
+    setTimeout(aiTakeTurn, 500);
+  } else {
+    resolveLotWinner(P, P.currentBidder, P.currentBid);
+  }
+}
+function humanSkip(){
+  const P = App.practice;
+  if(P.mode!=='solo') return;
+  P.skipsUsed++;
+  if(P.skipsUsed>=4){
+    // 4th attempt: auto-given the CURRENT (not a new) candidate
+    resolveLotWinner(P, P.soloPlayer, P.players[P.soloPlayer].budget===0?0:1);
+    return;
+  }
+  const passedOver = P.currentLot;
+  const cand = P.catThemeKey ? drawCategoryCandidate(P, P.currentLot.cat) : P.itemPool.shift();
+  if(!cand){ P.skipsUsed=4; return humanSkip(); }
+  // recycle the passed-over item to the back so skipping never shrinks the pool
+  (P.catThemeKey ? P.candidates : P.itemPool).push([passedOver.name, passedOver.r]);
+  P.currentLot = {name:cand[0], r:cand[1], cat:P.currentLot.cat};
+  renderPracticeDraft();
+}
+function humanClaim(amountStr){
+  const P = App.practice;
+  const budget = P.players[P.soloPlayer].budget;
+  let amount = budget===0 ? 0 : Math.max(1, Math.min(budget, parseInt(amountStr||'1',10)||1));
+  resolveLotWinner(P, P.soloPlayer, amount);
+}
+
+/* ============ AI LOGIC ============ */
+// How hard the AI plays. ceilingMult scales what it's willing to spend;
+// disinterest* controls how readily it walks away from weak items.
+// Because the judge scores by AVERAGE item rating, being picky is itself a
+// winning strategy — an AI that declines junk leaves the junk for its
+// opponent. So difficulty is mostly about SELECTIVITY, not raw spending:
+// Easy grabs almost anything (and drags its own average down), Hard walks
+// away from mediocre lots and pays up for the genuinely good ones.
+// How much each slot counts toward a squad's weighted rating. An attacker
+// swings the verdict more than a keeper, so where you spend actually matters.
+const POSITION_WEIGHTS = { GK:0.9, DEF:0.95, MID:1.1, ATT:1.3 };
+function weightFor(cat){ return POSITION_WEIGHTS[cat] !== undefined ? POSITION_WEIGHTS[cat] : 1; }
+
+const AI_DIFFICULTY = {
+  easy:   { ceilingMult: 0.75, disinterestBelow: 2, disinterestStep: 0.05, useLearning: false },
+  normal: { ceilingMult: 1.00, disinterestBelow: 4, disinterestStep: 0.08, useLearning: true  },
+  hard:   { ceilingMult: 1.45, disinterestBelow: 6, disinterestStep: 0.13, useLearning: true  }
+};
+
+// Named opponents, so practice mode has someone to play against rather than
+// an abstract slider. Each is a difficulty preset plus its own quirks.
+const AI_OPPONENTS = [
+  { id:'penny',  name:'Penny',  emoji:'🪙', level:'medium',
+    tag:'Hates spending. Wins by refusing junk, not by buying stars.',
+    ceilingMult:0.6,  disinterestBelow:3, disinterestStep:0.10, useLearning:false, snipe:0 },
+  { id:'marcus', name:'Marcus', emoji:'💥', level:'medium',
+    tag:'Lunges at anything rated 9+, shrugs at the rest.',
+    ceilingMult:1.0,  disinterestBelow:6, disinterestStep:0.14, useLearning:false, eliteBoost:1.8 },
+  { id:'ivy',    name:'Ivy',    emoji:'🧊', level:'medium',
+    tag:'Plays the averages. No favourites, no mistakes.',
+    ceilingMult:1.0,  disinterestBelow:4, disinterestStep:0.08, useLearning:true, snipe:0 },
+  { id:'rex',    name:'Rex',    emoji:'🔥', level:'easy',
+    tag:'Bids on everything early, then has nothing left. Beatable.',
+    ceilingMult:1.5,  disinterestBelow:2, disinterestStep:0.04, useLearning:true, earlyRush:1.4 },
+  { id:'sol',    name:'Sol',    emoji:'🧠', level:'hard',
+    tag:'Picky and patient. Only wants the best slots.',
+    ceilingMult:1.45, disinterestBelow:7, disinterestStep:0.15, useLearning:true, snipe:0 }
+];
+function opponentById(id){ return AI_OPPONENTS.find(o=>o.id===id) || AI_OPPONENTS[2]; }
+let aiPrefsCache = {};
+let aiPrefsLearningOff = false;   // set once the endpoint proves unreachable
+async function fetchAiPref(key){
+  if(aiPrefsCache[key]!==undefined) return aiPrefsCache[key];
+  // The AI's turn must never depend on this call completing. Offline (or in a
+  // sandboxed preview) a fetch can hang instead of failing, which would freeze
+  // the draft on "thinking…" forever. Race it against a short timeout, and
+  // remember the failure so we stop retrying every single lot.
+  try{
+    const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const req = fetch('/api/ai-prefs', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({action:'get', itemKey:key}),
+      signal: controller ? controller.signal : undefined
+    }).then(r=>r.json());
+    const timeout = new Promise(resolve => setTimeout(()=>{
+      if(controller){ try{ controller.abort(); }catch(e){} }
+      resolve(null);
+    }, 1200));
+    const data = await Promise.race([req, timeout]);
+    if(data === null){ aiPrefsLearningOff = true; aiPrefsCache[key] = null; return null; }
+    aiPrefsCache[key] = data && data.avg ? data.avg : null;
+    return aiPrefsCache[key];
+  }catch(e){ aiPrefsCache[key] = null; return null; }
+}
+async function aiTakeTurn(){
+  const P = App.practice;
+  if(!P || P.mode!=='contested' || P.turn!==1) return;
+  const ai = P.players[1];
+  const cur = P.currentBid;
+  const nextMin = cur+1;
+  if(ai.budget < nextMin){ aiPass(); return; }
+
+  const totalRemaining = 5 - ai.items.length;       // includes this pick
+  const D = P.opponent || AI_DIFFICULTY[P.difficulty] || AI_DIFFICULTY.normal;
+
+  // Genuine disinterest in weak items — without this the ceiling math always
+  // clears a $1 opening bid, so the AI contested (and usually won) literally
+  // everything regardless of quality. Below-average items get a real chance
+  // of a flat pass, scaling down as picks run low (never on the final pick,
+  // where the existing aggressive end-game behavior still applies).
+  if(totalRemaining > 1 && P.currentLot.r <= D.disinterestBelow){
+    const disinterest = Math.min(0.6, (D.disinterestBelow + 1 - P.currentLot.r) * D.disinterestStep) * (totalRemaining / 5);
+    if(Math.random() < disinterest){ aiPass(); return; }
+  }
+
+  const futurePicksAfterThis = totalRemaining - 1;  // picks still needed AFTER this one
+  const reserve = futurePicksAfterThis;             // keep at least $1 per future required pick
+
+  let baseFrac;
+  if(totalRemaining<=1) baseFrac = 0.7 + Math.random()*0.3;
+  else{
+    const steps = {5:0.22,4:0.28,3:0.38,2:0.48};
+    baseFrac = steps[totalRemaining] || 0.4;
+  }
+  const ratingFactor = 0.67 + (P.currentLot.r-1)/9*(1.33-0.67);
+  const affordableCeiling = Math.max(0, ai.budget - reserve);
+  let personalityMult = D.ceilingMult;
+  if(D.eliteBoost && P.currentLot.r >= 9) personalityMult *= D.eliteBoost;   // Marcus lunges at 9s
+  if(D.earlyRush && ai.items.length <= 1) personalityMult *= D.earlyRush;    // Rex front-loads
+  const organicCeiling = Math.min(affordableCeiling, Math.round(baseFrac*20*ratingFactor*personalityMult));
+
+  const key = (P.currentLot.cat||P.themeName)+'::'+P.currentLot.name;
+  const humanAvg = (D.useLearning && !aiPrefsLearningOff) ? await fetchAiPref(key) : null;
+  let ceiling = organicCeiling;
+  if(humanAvg){
+    // learned "market price" can nudge willingness up, but a single outlier bid
+    // can't blow the budget past a sane multiple of what the AI itself thinks is fair
+    const boosted = Math.round(humanAvg*1.1);
+    const softCap = Math.round(organicCeiling*1.5)+2;
+    ceiling = Math.max(organicCeiling, Math.min(affordableCeiling, boosted, softCap));
+  }
+
+  if(nextMin > ceiling){ aiPass(); return; }
+  const r = Math.random();
+  let inc = r<0.6?1: r<0.85?2:3;
+  let amount = Math.min(ai.budget, ceiling, cur+inc);
+  if(amount<=cur) amount = Math.min(ai.budget, cur+1);
+  if(amount>ai.budget || amount<=cur || amount>ceiling){ aiPass(); return; }
+
+  P.currentBid = amount; P.currentBidder = 1;
+  P.tickerLog.push(`AI: $${amount}`);
+  P.turn = 0;
+  renderPracticeDraft();
+}
+function aiPass(){
+  const P = App.practice;
+  if(P.currentBidder===null){
+    P.tickerLog.push(`${P.players[1].nick}: pass`);
+    P.passStreak = (P.passStreak||0)+1;
+    if(P.passStreak>=2){ return resolveForcedPass(P, 1); }
+    P.turn = 0;
+    renderPracticeDraft();
+  } else {
+    resolveLotWinner(P, P.currentBidder, P.currentBid);
+  }
+}
+function finishPractice(){
+  const P = App.practice;
+  showResultsScreen(P.players, P);
+}
+
+/* ============ PRACTICE DRAFT RENDER ============ */
+function renderPracticeDraft(){
+  const P = App.practice;
+  if(!P || !P.currentLot){ return; }
+  renderStalls(P.players, P.mode==='contested'?P.currentBidder:(P.mode==='solo'?P.soloPlayer:null), P.mode==='contested'?P.turn:null, P.catThemeKey);
+
+  $('lot-cat').textContent = P.currentLot.cat ? roleLabel(P.catThemeKey, P.currentLot.cat) : P.themeEmoji+' '+P.themeName;
+  $('lot-name').textContent = P.currentLot.name;
+  $('lot-stars').textContent = stars(P.currentLot.r);
+
+  $('bid-display').innerHTML = '$'+P.currentBid + (P.currentBidder!==null ? `<span class="by">— currently held by ${escapeHtml(P.players[P.currentBidder].nick)}</span>` : '');
+  $('ticker').textContent = P.tickerLog.length ? P.tickerLog.join(' → ') : 'New lot — place your bid';
+
+  $('waiting-turn').classList.add('hidden');
+  hideBidControls();
+
+  if(P.mode==='contested'){
+    $('status-line').textContent = P.turn===0 ? "Your turn — raise or pass" : `${P.players[1].nick} is thinking…`;
+    if(P.turn===0){
+      renderBidControls({
+        budget: P.players[0].budget,
+        minAmount: P.currentBid+1,
+        lotKey: P.currentLot.name+'|'+P.currentBid,
+        primaryLabel: 'Raise',
+        secondaryLabel: 'Pass',
+        onPrimary: (amt)=>{ sndClick(); humanRaise(amt); },
+        onSecondary: ()=>{ sndClick(); humanPass(); }
+      });
+    } else {
+      $('waiting-turn').classList.remove('hidden');
+    }
+  } else if(P.mode==='solo'){
+    if(P.soloPlayer===0){
+      $('status-line').textContent = "Nobody else needs this — it's yours. Pay what you like, or skip.";
+      const budget = P.players[0].budget;
+      renderBidControls({
+        budget, minAmount:1, freeMode: budget===0,
+        lotKey: P.currentLot.name,
+        primaryLabel: 'Claim',
+        secondaryLabel: `Skip it (${3-P.skipsUsed} left)`,
+        onPrimary: (amt)=>{ sndClick(); humanClaim(amt); },
+        onSecondary: ()=>{ sndClick(); humanSkip(); }
+      });
+    } else {
+      $('status-line').textContent = `${P.players[1].nick} doesn't need to compete for this one…`;
+      $('waiting-turn').classList.remove('hidden');
+    }
+  }
+}
+
+/* Unified horizontal bid-control widget: number input + Raise/Claim + Pass/Skip */
+function renderBidControls(opts){
+  $('bid-controls').classList.remove('hidden');
+  const input = $('bid-amount-input');
+  const primaryBtn = $('btn-submit-bid');
+  const secondaryBtn = $('btn-secondary-bid');
+  // A contested lot with no free-claim option: if the player's budget can't
+  // even cover the minimum raise, there is genuinely nothing to offer them —
+  // showing a raise input anyway (min > max) produced a control that silently
+  // submitted $0. Make the only real option (Pass) explicit instead.
+  const cannotAfford = !opts.freeMode && opts.budget < opts.minAmount;
+  if(cannotAfford){
+    input.classList.add('hidden');
+    primaryBtn.classList.add('hidden');
+    secondaryBtn.textContent = opts.secondaryLabel || 'Pass';
+    secondaryBtn.classList.remove('hidden');
+    secondaryBtn.onclick = opts.onSecondary;
+    $('bid-caption').textContent = `You have $${opts.budget} — not enough to raise. This lot is still contested, so it isn't a free claim.`;
+    return;
+  }
+  primaryBtn.classList.remove('hidden');
+  if(opts.freeMode){
+    input.classList.add('hidden');
+    primaryBtn.textContent = 'Claim (Free)';
+    primaryBtn.onclick = ()=>opts.onPrimary(0);
+  } else {
+    input.classList.remove('hidden');
+    input.min = opts.minAmount;
+    input.max = opts.budget;
+    // A poll lands every second; don't wipe an amount the player is typing.
+    const editing = (document.activeElement === input);
+    const stale = parseInt(input.value,10) < opts.minAmount;
+    if(!editing && (input.dataset.lotKey !== opts.lotKey || stale)){
+      input.value = Math.min(opts.minAmount, opts.budget);
+      input.dataset.lotKey = opts.lotKey || '';
+    }
+    primaryBtn.textContent = opts.primaryLabel;
+    primaryBtn.onclick = ()=>{
+      let amt = parseInt(input.value,10);
+      if(isNaN(amt) || amt<opts.minAmount) amt = opts.minAmount;
+      if(amt>opts.budget) amt = opts.budget;
+      opts.onPrimary(amt);
+    };
+  }
+  secondaryBtn.textContent = opts.secondaryLabel;
+  secondaryBtn.classList.toggle('hidden', !opts.secondaryLabel);
+  secondaryBtn.onclick = opts.onSecondary;
+  $('bid-caption').textContent = `You have $${opts.budget} left.`;
+}
+function hideBidControls(){
+  $('bid-controls').classList.add('hidden');
+  $('team-consensus-banner').classList.add('hidden');
+  $('btn-agree-team').classList.add('hidden');
+}
+
+function roleLabel(catThemeKey, cat){
+  const ct = CATEGORY_THEMES[catThemeKey];
+  return (ct && ct.catLabel[cat]) || cat;
+}
+// Compact label for item lists — falls back to the raw key if unknown.
+function catShortLabel(catThemeKey, cat){
+  const ct = CATEGORY_THEMES[catThemeKey];
+  return (ct && ct.catShort && ct.catShort[cat]) || cat;
+}
+function playerCardHTML(nick, budget, items, opts){
+  opts = opts||{};
+  const pct = Math.max(0, Math.min(100, (budget/20)*100));
+  const dot = opts.turnActive ? '<span class="turn-dot"></span>' : '';
+  const rows = items.length
+    ? items.map(it=>`<div class="item-row"><span class="iname">${it.cat?`<b>${escapeHtml(catShortLabel(opts.catThemeKey, it.cat))}:</b> `:''}${escapeHtml(it.name||'')}</span><span class="iprice">${it.paid===0?'FREE':(it.paid!=null?'$'+it.paid:'')}</span></div>`).join('')
+    : `<div class="empty-note">Nothing yet</div>`;
+  return `<div class="player-card${opts.leading?' leading':''}">
+    <div class="prow"><span class="pname">${dot}${escapeHtml(nick)}</span><span class="pbudget mono">$${budget}</span></div>
+    <div class="psub">remaining · ${items.length}/5 items</div>
+    <div class="budget-track"><div class="budget-fill" style="width:${pct}%"></div></div>
+    ${rows}
+  </div>`;
+}
+function renderStalls(players, leadingIdx, turnIdx, catThemeKey){
+  const row = $('stall-row'); row.innerHTML='';
+  players.forEach((p,i)=>{
+    row.innerHTML += playerCardHTML(p.nick, p.budget, p.items, {leading: leadingIdx===i, turnActive: turnIdx===i, catThemeKey});
+  });
+}
+
+/* ============ ONLINE DRAFT RENDER ============ */
+// A "side" is one contestant in the auction: a single player normally, or a
+// whole TEAM in a 2v2 room (shared budget/items, either member can act for it).
+function sidesOfClient(room){
+  return room.hostMode==='2v2' ? room.teams : room.players.filter(p=>p.role!=='host');
+}
+function sideLabelClient(room, idx){
+  if(room.hostMode==='2v2') return idx===0 ? 'Team A' : 'Team B';
+  const s = sidesOfClient(room)[idx];
+  return s ? s.nickname : '?';
+}
+function mySideIndexClient(room){
+  if(room.hostMode==='2v2'){
+    const p = room.players.find(p=>p.nickname===App.nickname);
+    return p ? p.team : -1;
+  }
+  return sidesOfClient(room).findIndex(p=>p.nickname===App.nickname);
+}
+function myPlayerIndex(room){ return mySideIndexClient(room); }
+
+function renderTeamConsensusBanner(room, myTeam){
+  const g = room.game;
+  const banner = $('team-consensus-banner');
+  const btn = $('btn-agree-team');
+  const pa = g.pendingAction;
+  if(room.hostMode!=='2v2' || !pa || pa.team!==myTeam){
+    banner.classList.add('hidden'); btn.classList.add('hidden');
+    return;
+  }
+  banner.classList.remove('hidden');
+  const teammate = room.players.find(p=>p.team===myTeam && p.nickname!==App.nickname);
+  const tmName = teammate ? teammate.nickname : 'your teammate';
+  const label = pa.type==='raise' ? `raise to $${pa.amount}`
+    : pa.type==='claim' ? `claim it for ${pa.amount===0?'free':'$'+pa.amount}`
+    : pa.type==='skip' ? 'reroll this one'
+    : 'pass';
+  if(pa.agreedBy.includes(App.nickname)){
+    $('consensus-text').textContent = `You proposed to ${label} — waiting for ${tmName} to agree (1/2 agreed). They have about 20s before it goes through on its own.`;
+    btn.classList.add('hidden');
+  } else {
+    $('consensus-text').textContent = `${tmName} wants to ${label}. Agree below, or make a different choice (1/2 agreed).`;
+    btn.textContent = `Agree — ${label}`;
+    btn.classList.remove('hidden');
+    btn.onclick = ()=>{
+      if(pa.type==='raise') onlineAction('raise',{amount:pa.amount});
+      else if(pa.type==='pass') onlineAction('pass',{});
+      else if(pa.type==='claim') onlineAction('claim',{amount:pa.amount});
+      else if(pa.type==='skip') onlineAction('skip',{});
+    };
+  }
+}
+
+function renderOnlineDraft(room){
+  const g = room.game;
+  if(!g){ return; }
+  const bidders = sidesOfClient(room);
+
+  if(g.bidLog){
+    if(App.onlineBidLogSeen===undefined || g.bidLog.length<App.onlineBidLogSeen) App.onlineBidLogSeen = 0;
+    if(g.bidLog.length>App.onlineBidLogSeen){
+      for(let i=App.onlineBidLogSeen;i<g.bidLog.length;i++){
+        const entry = g.bidLog[i];
+        if(!bidders[entry.player]) continue;
+        showItemWonToast(sideLabelClient(room, entry.player), entry.name, entry.amount);
+        sndGavel();
+        if(entry.amount<=2) setTimeout(()=>{ sndCoin(); confettiBurst(); }, 260);
+      }
+      App.onlineBidLogSeen = g.bidLog.length;
+    }
+  }
+
+  const displaySides = room.hostMode==='2v2'
+    ? room.teams.map((t,i)=>({
+        nick: `${i===0?'Team A':'Team B'} (${room.players.filter(p=>p.team===i).map(p=>p.nickname).join(' & ')})`,
+        budget: t.budget, items: t.items
+      }))
+    : bidders.map(p=>({nick:p.nickname, budget:p.budget, items:p.items}));
+  renderStalls(displaySides, g.currentBidderIdx, g.mode==='contested'?g.turnIdx:null, room.theme.key);
+
+  const amHost = room.players.find(p=>p.nickname===App.nickname && p.role==='host');
+  $('host-watch-note').classList.toggle('hidden', !amHost);
+
+  // Between someone winning a lot and our next poll, this snapshot still shows
+  // the won lot as live. Rendering it would flash an already-drafted item as if
+  // it were up for auction, and any tap would be a bid on a lot that no longer
+  // exists (the "Not your turn" popup). Detect it and wait for fresh state.
+  if(g.currentLot && bidders.some(p=>(p.items||[]).some(it=>it.name===g.currentLot.name))){
+    $('status-line').textContent = 'Next lot coming up…';
+    $('draft-active-area').classList.add('hidden');
+    if(!App.staleResyncPending){
+      App.staleResyncPending = true;
+      setTimeout(()=>{ App.staleResyncPending = false; pollRoom(); }, 120);
+    }
+    return;
+  }
+
+  // Hosted rooms: the host is the auctioneer and chooses each lot.
+  if(g.awaitingHostPick){
+    $('draft-active-area').classList.add('hidden');
+    if(amHost){
+      $('host-watch-note').classList.add('hidden');
+      $('status-line').textContent = g.pickCat
+        ? `You're picking the next ${roleLabel(room.theme.key, g.pickCat)} lot`
+        : "You're picking the next lot";
+      renderHostPicker(room);
+    } else {
+      $('host-pick-panel').classList.add('hidden');
+      $('status-line').textContent = `${(roomHostName(room)||'The host')} is choosing the next lot…`;
+    }
+    return;
+  }
+  $('host-pick-panel').classList.add('hidden');
+
+  if(!g.currentLot){
+    $('draft-active-area').classList.add('hidden');
+    $('status-line').textContent = 'Waiting for the next lot…';
+    return;
+  }
+  $('draft-active-area').classList.remove('hidden');
+  $('lot-cat').textContent = g.currentLot.cat ? roleLabel(room.theme.key, g.currentLot.cat) : (room.theme.emoji||'🎯')+' '+room.theme.name;
+  $('lot-name').textContent = g.currentLot.name;
+  $('lot-stars').textContent = stars(g.currentLot.r);
+  $('bid-display').innerHTML = '$'+g.currentBid + (g.currentBidderIdx!==null && g.currentBidderIdx!==undefined ? `<span class="by">— currently held by ${escapeHtml(sideLabelClient(room, g.currentBidderIdx))}</span>` : '');
+  $('ticker').textContent = (g.tickerLog&&g.tickerLog.length) ? g.tickerLog.join(' → ') : 'New lot — place your bid';
+
+  $('waiting-turn').classList.add('hidden');
+  hideBidControls();
+
+  const myIdx = myPlayerIndex(room);
+  if(amHost){
+    $('status-line').textContent = g.mode==='contested' ? `${sideLabelClient(room, g.turnIdx)}'s turn` : `${sideLabelClient(room, g.soloPlayerIdx)} claims this one`;
+    $('waiting-turn').classList.remove('hidden');
+    $('waiting-turn').textContent = "You're watching this one play out.";
+    return;
+  }
+  if(g.mode==='contested'){
+    const myTurn = g.turnIdx===myIdx;
+    $('status-line').textContent = myTurn ? "Your turn — raise or pass" : `● Waiting for ${sideLabelClient(room, g.turnIdx)} to respond…`;
+    if(myTurn){
+      renderTeamConsensusBanner(room, myIdx);
+      renderBidControls({
+        budget: bidders[myIdx].budget,
+        minAmount: g.currentBid+1,
+        lotKey: g.currentLot.name+'|'+g.currentBid,
+        primaryLabel: 'Raise',
+        secondaryLabel: 'Pass',
+        onPrimary: (amt)=>onlineAction('raise',{amount:amt}),
+        onSecondary: ()=>onlineAction('pass',{})
+      });
+    } else {
+      $('waiting-turn').classList.remove('hidden');
+    }
+  } else if(g.mode==='solo'){
+    if(g.soloPlayerIdx===myIdx){
+      $('status-line').textContent = "Nobody else needs this — it's yours.";
+      const budget = bidders[myIdx].budget;
+      // In a hosted room the host chooses the lots, so there's no reroll to offer.
+      const canSkip = !amHost && !roomHostName(room);
+      renderTeamConsensusBanner(room, myIdx);
+      renderBidControls({
+        budget, minAmount:1, freeMode: budget===0,
+        lotKey: g.currentLot.name,
+        primaryLabel: 'Claim',
+        secondaryLabel: canSkip ? `Skip it (${3-(g.skipsUsed||0)} left)` : '',
+        onPrimary: (amt)=>onlineAction('claim',{amount:amt}),
+        onSecondary: canSkip ? ()=>onlineAction('skip',{}) : ()=>{}
+      });
+    } else {
+      $('status-line').textContent = `${sideLabelClient(room, g.soloPlayerIdx)} is claiming this one…`;
+      $('waiting-turn').classList.remove('hidden');
+    }
+  }
+}
+function roomHostName(room){
+  const h = room.players.find(p=>p.role==='host');
+  return h && h.nickname;
+}
+function submitCustomLot(){
+  const nameEl = $('custom-lot-name'), rateEl = $('custom-lot-rating'), errEl = $('custom-lot-error');
+  const raw = nameEl.value.trim();
+  const bad = checkText(raw, 'Item name');
+  if(bad){ errEl.textContent = bad; return; }
+  let rating = parseInt(rateEl.value, 10);
+  if(isNaN(rating)) rating = 6;
+  rating = Math.max(1, Math.min(10, rating));
+  errEl.textContent = '';
+  nameEl.value = '';
+  onlineAction('hostPick', { item: raw, rating, custom: true });
+}
+function renderHostPicker(room){
+  const panel = $('host-pick-panel');
+  panel.classList.remove('hidden');
+  const opts = App.hostPickOptions || [];
+  const g = room.game;
+  const short = g.pickCat ? catShortLabel(room.theme.key, g.pickCat) : null;
+  // keep abbreviations like GK/DEF upper-case; lower-case real words
+  $('host-pick-label').textContent = short
+    ? `choose the next ${short === short.toUpperCase() ? short : short.toLowerCase()}`
+    : 'choose the next lot';
+  $('btn-custom-lot').onclick = submitCustomLot;
+  const list = $('host-pick-list');
+  if(!opts.length){ list.innerHTML = '<div class="waiting-note">Loading options…</div>'; return; }
+  const tk = room.theme.key;
+  const sorted = opts.slice().sort((a,b)=>(itemIdFor(a.name,tk)||0)-(itemIdFor(b.name,tk)||0));
+  list.innerHTML = `<div class="pick-count">${sorted.length} still available — tap one to put it up</div>` +
+    sorted.map(o=>`<div class="pick-row" data-name="${escapeHtml(o.name)}">
+      <span class="pname"><span class="pid">#${itemIdFor(o.name,tk)||'?'}</span>${escapeHtml(o.name)}</span>
+      <span class="prate">${o.r}/10</span></div>`).join('');
+  list.querySelectorAll('.pick-row').forEach(el=>{
+    el.onclick = ()=>{
+      if(App.onlineActionInFlight) return;
+      list.querySelectorAll('.pick-row').forEach(x=>x.style.opacity='0.45');
+      onlineAction('hostPick', {item: el.dataset.name});
+    };
+  });
+}
+async function onlineAction(type, payload){
+  // One tap can fire two click events on mobile; the duplicate would land
+  // after the turn moved on and be rejected. Only allow one in flight.
+  if(App.onlineActionInFlight) return;
+  App.onlineActionInFlight = true;
+  sndClick();
+  try{
+    // The server returns the fresh room in its response — render that
+    // directly rather than firing a second "state" fetch for data we have.
+    const seq = ++App.pollSeq;
+    const data = await api(type, Object.assign({nickname: App.nickname}, payload||{}));
+    if(data.options) App.hostPickOptions = data.options;
+    applyRoomIfNewest(seq, data.room);
+  } catch(e){
+    // "Not your turn" and write conflicts are transient: the turn moved on
+    // between render and tap, or two writes raced. The server already retries
+    // stale reads internally, so blocking the game on an alert here just spams
+    // dialogs. Resync quietly and show a one-line status instead.
+    if(/has expired|no room with code/i.test(e.message)){
+      stopPolling(); App.roomCode = null; App.mode = null; forgetSession();
+      alert(e.message);
+      showScreen('screen-home');
+      return;
+    }
+    if(/not your turn|room changed|conflict|no active lot/i.test(e.message)){
+      $('status-line').textContent = 'Syncing…';
+    } else {
+      alert(`Action failed: ${e.message}`);
+    }
+    pollRoom();
+  } finally {
+    App.onlineActionInFlight = false;
+  }
+}
+
+/* ============ JUDGE ============ */
+const OPENER_TPL = ["Auction's over — time to judge.", "Bidding's done. Let's tally it up.", "That's the last lot. Here's the read."];
+const SPLURGE_TPL = ["No restraint from {p} — ${a} on {item} alone.", "{p} didn't blink at ${a} for {item}.", "Big spender alert: {p} paid ${a} for {item}."];
+const STEAL_TPL = ["{p} got {item} for pocket change — ${a}.", "{p} walked away with {item} for just ${a}.", "{p} snagged {item} at a bargain ${a}."];
+const FREEBIE_TPL = ["{n} item{s} came home completely free.", "{n} lucky freebie{s} made it into the final collections.", "{n} pick{s} cost absolutely nothing."];
+const WIN_TPL = ["{p} built the sharper collection — {a1} average vs {a2}.", "{p} simply rated higher across the board, {a1} to {a2}.", "{p} takes it, item for item — {a1} vs {a2}."];
+const TIE_TPL = ["Dead even — both collections rate exactly {a1} on average.", "Too close to call: an even split in quality, {a1} apiece."];
+// position drafts are settled slot-by-slot, so the verdict should say so
+const WIN_H2H_TPL = ["{p} won the head-to-head {s1}–{s2}.", "Slot for slot, {p} came out ahead {s1}–{s2}.", "{p} takes it {s1}–{s2} across the five duels."];
+const WIN_H2H_WEIGHTED_TPL = ["Level at {s1}–{s2}, so it came down to where the quality sat — {p} edged it on weighted rating.", "{s1}–{s2} on duels, but {p} was stronger where it counts."];
+
+function judgeGame(playersItems, catThemeKey){
+  const avg = items => items.length ? items.reduce((s,it)=>s+it.r,0)/items.length : 0;
+  const avgs = playersItems.map(avg);
+
+  // Position drafts are judged as five head-to-head duels rather than one
+  // average, so a single superstar can't paper over a weak slot. Weighted
+  // rating (attackers count more) breaks a level tie.
+  const ct = CATEGORY_THEMES[catThemeKey];
+  if(ct && playersItems.length === 2 && playersItems.every(x=>x.length)){
+    const duels = [];
+    let w0 = 0, w1 = 0;
+    ct.cats.forEach(cat=>{
+      const a = playersItems[0].filter(it=>it.cat===cat).sort((x,y)=>y.r-x.r);
+      const b = playersItems[1].filter(it=>it.cat===cat).sort((x,y)=>y.r-x.r);
+      const n = Math.max(a.length, b.length);
+      for(let i=0;i<n;i++){
+        const ai = a[i], bi = b[i];
+        const ar = ai ? ai.r : 0, br = bi ? bi.r : 0;
+        duels.push({ cat, a: ai, b: bi, winner: ar>br ? 0 : br>ar ? 1 : null });
+      }
+    });
+    duels.forEach(d=>{
+      const wt = weightFor(d.cat);
+      w0 += (d.a ? d.a.r : 0) * wt;
+      w1 += (d.b ? d.b.r : 0) * wt;
+    });
+    const s0 = duels.filter(d=>d.winner===0).length;
+    const s1 = duels.filter(d=>d.winner===1).length;
+    let winner = null;
+    if(s0>s1) winner=0; else if(s1>s0) winner=1;
+    else if(w0>w1) winner=0; else if(w1>w0) winner=1;
+    return { avgs, winner, duels, score:[s0,s1], weighted:[w0,w1], headToHead:true };
+  }
+
+  let winner = null;
+  if(avgs[0]>avgs[1]) winner=0; else if(avgs[1]>avgs[0]) winner=1;
+  return {avgs, winner, headToHead:false};
+}
+function subj(nick){ return nick==='You' ? 'You' : nick; }
+function buildJudgmentParagraph(nicks, itemsArr, budgets, bidLog, j){
+  const spent = budgets.map(b=>20-b);
+  const counts = itemsArr.map(items=>items.length);
+  const s = [];
+  s.push(pick(OPENER_TPL));
+  s.push(nicks[0]==='You'
+    ? `You put down $${spent[0]} of your $20 across ${counts[0]} pick${counts[0]===1?'':'s'}.`
+    : `${nicks[0]} put down $${spent[0]} of their $20 across ${counts[0]} pick${counts[0]===1?'':'s'}.`);
+  s.push(`${nicks[1]} spent $${spent[1]}, landing ${counts[1]} pick${counts[1]===1?'':'s'}.`);
+  const bigLog = bidLog.filter(b=>b.amount>=5).sort((a,b)=>b.amount-a.amount);
+  if(bigLog.length){
+    const b = bigLog[0];
+    s.push(pick(SPLURGE_TPL).replace('{p}',subj(nicks[b.player])).replace('{a}',b.amount).replace('{item}',b.name));
+  }
+  const steals = bidLog.filter(b=>b.amount>0 && b.amount<=2);
+  if(steals.length){
+    const b = steals[0];
+    s.push(pick(STEAL_TPL).replace('{p}',subj(nicks[b.player])).replace('{a}',b.amount).replace('{item}',b.name));
+  }
+  const freebies = bidLog.filter(b=>b.amount===0).length;
+  if(freebies>0){
+    s.push(pick(FREEBIE_TPL).replace('{n}',freebies).replace(/{s}/g, freebies===1?'':'s'));
+  }
+  if(j.winner===null){
+    if(j.headToHead) s.push(`Completely level — ${j.score[0]}–${j.score[1]} on duels and nothing between them on weighted rating.`);
+    else s.push(pick(TIE_TPL).replace(/{a1}/g, j.avgs[0].toFixed(1)));
+  } else {
+    if(j.headToHead){
+      const tpl = (j.score[0]===j.score[1]) ? pick(WIN_H2H_WEIGHTED_TPL) : pick(WIN_H2H_TPL);
+      s.push(tpl.replace('{p}',subj(nicks[j.winner]))
+               .replace('{s1}',j.score[j.winner]).replace('{s2}',j.score[1-j.winner]));
+    } else {
+      s.push(pick(WIN_TPL).replace('{p}',subj(nicks[j.winner])).replace('{a1}',j.avgs[j.winner].toFixed(1)).replace('{a2}',j.avgs[1-j.winner].toFixed(1)));
+    }
+  }
+  return s.join(' ');
+}
+
+/* ============ RESULTS: PRACTICE ============ */
+function showResultsScreen(players, P){
+  const itemsArr = players.map(p=>p.items);
+  const nicks = players.map(p=>p.nick);
+  const budgets = players.map(p=>p.budget);
+  renderResults(itemsArr, nicks, budgets, P.bidLog, resultViewFor(P.catThemeKey), {
+    themeLabel: (P.themeEmoji||'')+' '+P.themeName,
+    catThemeKey: P.catThemeKey,
+    themeKey: App.themeKey,
+    mySideIdx: 0,
+    resultKey: 'practice|'+P.gameId,
+    onRematch: ()=>{ showScreen('screen-draft'); startPracticeGame(); }
+  });
+}
+
+/* ============ RESULTS: ONLINE ============ */
+// Read-only view of a permanently saved result (from a /r/XXXX link).
+async function loadSharedResult(id){
+  try{
+    const res = await fetch('/api/room', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'result', resultId:id })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.result){ alert(data.error || 'Could not load that result.'); return false; }
+    const s = data.result;
+    const itemsArr = s.sides.map(x=>x.items);
+    const nicks = s.sides.map(x=>x.label);
+    const budgets = s.sides.map(x=>x.budget);
+    renderResults(itemsArr, nicks, budgets, s.bidLog||[], resultViewFor(s.theme.key), {
+      themeLabel: (s.theme.emoji||'🎯')+' '+s.theme.name,
+      catThemeKey: s.theme.key,
+      themeKey: s.theme.key,
+      canRematch: false,
+      sharedView: true,
+      shareUrl: location.origin + '/r/' + s.id,
+      onRematch: ()=>{}
+    });
+    $('btn-home').textContent = '🏠 Play Dr4fter';
+    $('btn-home').onclick = ()=>{ location.href = '/'; };
+    return true;
+  }catch(e){ alert('Could not load that result.'); return false; }
+}
+
+function renderResultsFromRoom(room){
+  const bidders = sidesOfClient(room);
+  const itemsArr = bidders.map(p=>p.items);
+  const nicks = room.hostMode==='2v2'
+    ? room.teams.map((t,i)=>`${i===0?'Team A':'Team B'} (${room.players.filter(p=>p.team===i).map(p=>p.nickname).join(' & ')})`)
+    : bidders.map(p=>p.nickname);
+  const budgets = bidders.map(p=>p.budget);
+  const amHostOrCreator = room.players.find(p=>p.nickname===App.nickname && (p.role==='host'||p.role==='creator'));
+  const myIdx = mySideIndexClient(room);
+  renderResults(itemsArr, nicks, budgets, room.game.bidLog||[], resultViewFor(room.theme.key), {
+    themeLabel: (room.theme.emoji||'🎯')+' '+room.theme.name,
+    catThemeKey: room.theme.key,
+    themeKey: room.theme.key,
+    mySideIdx: myIdx,
+    shareUrl: room.game.resultId ? (location.origin + '/r/' + room.game.resultId) : '',
+    resultKey: room.code+'|'+(room.game.gameId||''),
+    canRematch: !!amHostOrCreator,
+    onRematch: goRematchThemePick
+  });
+}
+
+/* ============ SHARED RESULTS RENDER ============ */
+// Which extra visual a theme gets on the results screen ('pitch' for the
+// 5-a-side SVG formation, 'list' for everything else).
+function resultViewFor(themeKey){
+  const ct = CATEGORY_THEMES[themeKey];
+  return (ct && ct.resultView) || 'list';
+}
+function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
+  showScreen('screen-results');
+  const j = judgeGame(itemsArr, opts.catThemeKey);
+  $('results-title').textContent = opts.themeLabel;
+  $('results-subhead').textContent = '';
+
+  const picksWrap = $('picks-wrap'); picksWrap.innerHTML='';
+  $('pitches-wrap').innerHTML='';
+  nicks.forEach((n,i)=>{
+    picksWrap.innerHTML += playerCardHTML(n, budgets[i], itemsArr[i], {leading: j.winner===i, catThemeKey: opts.catThemeKey});
+  });
+  if(resultView==='pitch'){
+    const pitchWrap = document.createElement('div'); pitchWrap.className='pitch-wrap';
+    itemsArr.forEach((items,i)=>{
+      const col = document.createElement('div'); col.className='pitch-col';
+      col.innerHTML = `<div style="font-weight:700; font-size:12px; margin-bottom:4px;">${escapeHtml(nicks[i])}</div>` + renderPitchSVG(items);
+      pitchWrap.appendChild(col);
+    });
+    $('pitches-wrap').appendChild(pitchWrap);
+  }
+
+  const flavorWrap = $('flavor-wrap'); flavorWrap.innerHTML='';
+  const pillLabel = j.winner===null ? "It's a tie" : `${nicks[j.winner]} wins`;
+  const pillClass = j.winner===null ? 'pill tie' : 'pill';
+  const paragraph = buildJudgmentParagraph(nicks, itemsArr, budgets, bidLog, j);
+  let duelHTML = '';
+  if(j.headToHead){
+    const rows = j.duels.map(d=>{
+      const an = d.a ? d.a.name : '—', bn = d.b ? d.b.name : '—';
+      const mark = w => w===null ? '<span style="color:var(--ink-soft);">draw</span>'
+        : `<span style="color:var(--rust); font-weight:700;">${w===0?'◀':'▶'}</span>`;
+      return `<div class="duel-row">
+        <span class="duel-side${d.winner===0?' won':''}">${escapeHtml(an)} <b>${d.a?d.a.r:0}</b></span>
+        <span class="duel-mid">${catShortLabel(opts.catThemeKey, d.cat)} ${mark(d.winner)}</span>
+        <span class="duel-side right${d.winner===1?' won':''}"><b>${d.b?d.b.r:0}</b> ${escapeHtml(bn)}</span>
+      </div>`;
+    }).join('');
+    duelHTML = `<div class="duel-head">Head-to-head &mdash; ${j.score[0]}&ndash;${j.score[1]}</div>${rows}
+      <div class="duel-foot">weighted rating ${j.weighted[0].toFixed(1)} vs ${j.weighted[1].toFixed(1)}
+      <span style="opacity:.7;">(attackers count more)</span></div>`;
+  }
+  const card = document.createElement('div'); card.className='judgment-card';
+  card.innerHTML = `<div class="jhead"><h2 class="serif">Judgment</h2><span class="${pillClass}">${escapeHtml(pillLabel)}</span></div>
+    <div class="judgment-text">${escapeHtml(paragraph)}</div>${duelHTML}`;
+  flavorWrap.appendChild(card);
+
+  // stash what the share/export needs
+  App.lastResults = {
+    themeLabel: opts.themeLabel, nicks, itemsArr, budgets,
+    catThemeKey: opts.catThemeKey, verdict: paragraph, shareUrl: opts.shareUrl || ''
+  };
+
+  // record this result once (guarded so re-renders/polls don't double-count)
+  if(!opts.sharedView && opts.resultKey && App.lastRecordedResult !== opts.resultKey){
+    App.lastRecordedResult = opts.resultKey;
+    const myIdx = opts.mySideIdx;
+    if(myIdx != null && myIdx >= 0 && itemsArr[myIdx]){
+      const outcome = j.winner === null ? 'tie' : (j.winner === myIdx ? 'win' : 'loss');
+      recordGameResult(opts.themeLabel.replace(/^\S+\s/, ''), itemsArr[myIdx], budgets[myIdx], outcome);
+    }
+  }
+
+  // optional AI picture of what each side built (physical themes only)
+  const vWrap = $('visual-wrap'), vBtns = $('visual-buttons'), vStage = $('visual-stage');
+  vStage.innerHTML = '';
+  const visTheme = opts.themeKey || opts.catThemeKey;
+  if(canVisualise(visTheme)){
+    vWrap.classList.remove('hidden');
+    vBtns.innerHTML = nicks.map((n,i)=>
+      `<button class="btn btn-secondary" data-side="${i}" style="margin-top:0;">✨ ${escapeHtml(n.split(' (')[0])}'s</button>`).join('');
+    vBtns.querySelectorAll('button').forEach(btn=>{
+      btn.onclick = ()=>{
+        const i = +btn.dataset.side;
+        const prompt = buildVisualPrompt(visTheme, itemsArr[i]);
+        if(!prompt) return;
+        sndClick();
+        vStage.innerHTML = '<div class="visual-skel"></div><div class="visual-note">Generating… this takes 5–15 seconds.</div>';
+        const img = new Image();
+        const seed = Math.floor(Math.random()*100000);
+        let done = false;
+        const fail = (msg)=>{
+          if(done) return; done = true;
+          vStage.innerHTML = `<div class="visual-note">${msg}</div>`;
+        };
+        // don't leave a shimmer running forever if the service is slow/down
+        const timer = setTimeout(()=>fail("The image service didn't respond. It's a free service, so it's sometimes busy — try again in a moment."), 30000);
+        img.onload = ()=>{
+          if(done) return; done = true; clearTimeout(timer);
+          vStage.innerHTML = '';
+          vStage.appendChild(img);
+          const note = document.createElement('div');
+          note.className = 'visual-note';
+          note.textContent = `${nicks[i].split(' (')[0]}'s build, imagined. Generated by AI — details won't be exact.`;
+          vStage.appendChild(note);
+        };
+        img.onerror = ()=>{ clearTimeout(timer); fail("Couldn't generate an image right now — the free image service may be down."); };
+        img.alt = 'AI impression of the drafted collection';
+        img.src = visualUrl(prompt, seed);
+      };
+    });
+  } else {
+    vWrap.classList.add('hidden');
+    vBtns.innerHTML = '';
+  }
+
+  const linkBtn = $('btn-copy-link');
+  linkBtn.classList.toggle('hidden', !opts.shareUrl);
+  if(opts.shareUrl){
+    linkBtn.onclick = async ()=>{
+      const orig = linkBtn.textContent;
+      try{ await navigator.clipboard.writeText(opts.shareUrl); linkBtn.textContent = '✓ Link copied!'; }
+      catch(e){ linkBtn.textContent = opts.shareUrl; }
+      setTimeout(()=>{ linkBtn.textContent = orig; }, 2200);
+    };
+  }
+  // a shared read-only view has nothing to rematch or save stats for
+  if(opts.sharedView){ $('btn-rematch').classList.add('hidden'); }
+
+  $('btn-rematch').classList.toggle('hidden', opts.canRematch===false);
+  $('btn-rematch').onclick = opts.onRematch;
+  $('btn-home').onclick = ()=>{ stopPolling(); App.roomCode=null; App.mode=null; forgetSession(); showScreen('screen-home'); };
+}
+
+
+/* ============ SVG SOCCER PITCH ============ */
+function shortName(n){ const parts=n.split(' '); return parts.length>1 ? parts[parts.length-1] : n; }
+function renderPitchSVG(items){
+  const byCat = {GK:[],DEF:[],MID:[],ATT:[]};
+  items.forEach(it=>{ if(byCat[it.cat]) byCat[it.cat].push(it); });
+  const W=200,H=300;
+  let svg = `<svg class="pitch" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">
+    <rect x="0" y="0" width="${W}" height="${H}" fill="#4c7a5a"/>
+    <rect x="0" y="0" width="${W}" height="${H}" fill="url(#stripes)" opacity="0.06"/>
+    <defs><pattern id="stripes" width="1" height="34" patternUnits="userSpaceOnUse">
+      <rect width="1" height="17" fill="#ffffff"/></pattern></defs>
+    <rect x="4" y="4" width="${W-8}" height="${H-8}" fill="none" stroke="#fff" stroke-width="2"/>
+    <line x1="4" y1="${H/2}" x2="${W-4}" y2="${H/2}" stroke="#fff" stroke-width="2"/>
+    <circle cx="${W/2}" cy="${H/2}" r="24" fill="none" stroke="#fff" stroke-width="2"/>
+    <rect x="${W/2-40}" y="4" width="80" height="34" fill="none" stroke="#fff" stroke-width="2"/>
+    <rect x="${W/2-40}" y="${H-38}" width="80" height="34" fill="none" stroke="#fff" stroke-width="2"/>
+  `;
+  // A little shirt in the player's club colours, with the rating on the back
+  // and the name underneath.
+  function jersey(x, y, item, isKeeper){
+    const kit = kitFor(item.name);
+    const primary = isKeeper ? '#2fbf71' : kit[0];
+    const secondary = isKeeper ? '#166b3d' : kit[1];
+    const striped = isKeeper ? false : kit[2];
+    const w = 26, h = 24, uid = 'clip'+Math.random().toString(36).slice(2,8);
+    const left = x - w/2, top = y - h/2;
+    // body + sleeves
+    const body = `M${left+5},${top+4} L${left+5},${top+h} L${left+w-5},${top+h} L${left+w-5},${top+4} Z`;
+    const lSleeve = `M${left+5},${top+4} L${left-1},${top+9} L${left+2},${top+15} L${left+5},${top+12} Z`;
+    const rSleeve = `M${left+w-5},${top+4} L${left+w+1},${top+9} L${left+w-2},${top+15} L${left+w-5},${top+12} Z`;
+    svg += `<defs><clipPath id="${uid}"><path d="${body}"/></clipPath></defs>`;
+    svg += `<path d="${body}" fill="${primary}" stroke="#1a1a1a" stroke-width="1"/>`;
+    if(striped){
+      for(let i=0;i<3;i++){
+        svg += `<rect x="${left+6+i*5.2}" y="${top+4}" width="2.6" height="${h}" fill="${secondary}" clip-path="url(#${uid})"/>`;
+      }
+    }
+    svg += `<path d="${lSleeve}" fill="${secondary}" stroke="#1a1a1a" stroke-width="0.8"/>`;
+    svg += `<path d="${rSleeve}" fill="${secondary}" stroke="#1a1a1a" stroke-width="0.8"/>`;
+    // collar
+    svg += `<path d="M${x-4},${top+4} L${x},${top+8} L${x+4},${top+4}" fill="none" stroke="#1a1a1a" stroke-width="1"/>`;
+    // rating "number" on the shirt — dark text on light kits, light on dark
+    const lum = parseInt(primary.slice(1,3),16)*0.299 + parseInt(primary.slice(3,5),16)*0.587 + parseInt(primary.slice(5,7),16)*0.114;
+    svg += `<text x="${x}" y="${top+19}" font-size="10" font-weight="bold" text-anchor="middle"
+      font-family="Helvetica,Arial,sans-serif" fill="${lum>140?'#1a1a1a':'#ffffff'}">${item.r}</text>`;
+    // name plate under the shirt
+    const nm = escapeHtml(shortName(item.name).slice(0,12));
+    svg += `<rect x="${x-27}" y="${top+h+2}" width="54" height="11" rx="3" fill="rgba(20,20,20,0.55)"/>`;
+    svg += `<text x="${x}" y="${top+h+10}" font-size="7.5" text-anchor="middle"
+      font-family="Helvetica,Arial,sans-serif" fill="#ffffff">${nm}</text>`;
+  }
+  if(byCat.ATT[0]) jersey(W/2, 38, byCat.ATT[0], false);
+  if(byCat.MID[0]) jersey(W/2-40, 118, byCat.MID[0], false);
+  if(byCat.MID[1]) jersey(W/2+40, 118, byCat.MID[1], false);
+  if(byCat.DEF[0]) jersey(W/2, 190, byCat.DEF[0], false);
+  if(byCat.GK[0])  jersey(W/2, 258, byCat.GK[0], true);
+  svg += `</svg>`;
+  return svg;
+}
+
+/* ============ SAVE AS IMAGE ============ */
+function buildShareText(){
+  const d = App.lastResults;
+  if(!d) return '';
+  const lines = [];
+  lines.push(`Dr4fter — ${d.themeLabel}`);
+  lines.push(d.verdict);
+  lines.push('');
+  d.nicks.forEach((n,i)=>{
+    lines.push(`${n} — $${20-d.budgets[i]} spent`);
+    d.itemsArr[i].forEach(it=>{
+      const price = it.paid===0 ? 'FREE' : '$'+it.paid;
+      lines.push(`  ${it.cat ? catShortLabel(d.catThemeKey, it.cat)+': ' : ''}${it.name} (${it.r}/10) — ${price}`);
+    });
+    lines.push('');
+  });
+  if(d.shareUrl) lines.push(d.shareUrl);
+  return lines.join('\n').trim();
+}
+$('btn-copy-text').onclick = async ()=>{
+  const btn = $('btn-copy-text'), orig = btn.textContent;
+  const text = buildShareText();
+  try{ await navigator.clipboard.writeText(text); btn.textContent = '✓ Copied!'; }
+  catch(e){ btn.textContent = 'Copy failed'; }
+  setTimeout(()=>{ btn.textContent = orig; }, 1600);
+};
+$('btn-save-image').onclick = async ()=>{
+  try{
+    const canvas = await html2canvas($('results-card'), {backgroundColor:'#F5EFE3', scale:2});
+    canvas.toBlob(async (blob)=>{
+      const file = new File([blob], 'dr4fter.png', {type:'image/png'});
+      if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file], title:'Dr4fter'}); return; }catch(e){}
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='dr4fter.png';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 4000);
+    });
+  }catch(e){ alert('Could not generate image on this device.'); }
+};
+
+/* ============ REMATCH FLOW (online) ============ */
+function goRematchThemePick(){
+  App.inRematch = true;
+  stopPolling();
+  showScreen('screen-home');
+  updateHomeForRematch();
+}
+function updateHomeForRematch(){
+  const inR = !!App.inRematch;
+  $('rematch-bar').classList.toggle('hidden', !inR);
+  $('mode-select-card').classList.toggle('hidden', inR);
+  $('mode-select-label').classList.toggle('hidden', inR);
+}
+$('btn-cancel-rematch').onclick = ()=>{ App.inRematch=false; App.roomCode=null; updateHomeForRematch(); };
+$('btn-start-rematch').onclick = async ()=>{
+  if(!App.themeKey){ alert('Pick a theme first!'); return; }
+  try{
+    const data = await api('newRound', {nickname: App.nickname, theme: themePayload()});
+    App.inRematch = false;
+    renderRoomState(data.room);
+    startPolling();
+  }catch(e){ alert('Could not start rematch: '+e.message); }
+};
+
+/* ============ INIT ============ */
+$('btn-use-custom-space').onclick  = ()=>useCustomTheme('space');
+$('btn-use-custom-things').onclick = ()=>useCustomTheme('things');
+renderThemeGrid();
+renderOpponents();
+updateHomeForRematch();
+
+/* ---- ?join=CODE (from a QR scan) prefills the join screen ---- */
+(function(){
+  let code = null;
+  try{
+    const m = location.search.match(/[?&]join=([A-Za-z0-9]{5})\b/);
+    if(m) code = m[1].toUpperCase();
+  }catch(e){ return; }
+  if(!code) return;
+  goNickname('join');
+  $('join-code-input').value = code;
+  $('nickname-context').textContent = `Joining room ${code} — just pick a nickname.`;
+})();
+
+/* ---- /r/XXXXXX opens a saved result instead of the home screen ---- */
+(function(){
+  // guarded: a throw at top level here would kill the whole script
+  let m = null;
+  try{ m = location.pathname.match(/^\/r\/([A-Za-z0-9]{4,10})\/?$/); }catch(e){ return; }
+  if(!m) return;
+  App.sharedResultId = m[1].toUpperCase();
+  showScreen('screen-results');
+  $('results-title').textContent = 'Loading…';
+  loadSharedResult(App.sharedResultId);
+})();
+
+/* ---- offer to rejoin a room from a closed tab ---- */
+(function(){
+  const s = loadSession();
+  if(!s) return;
+  $('rejoin-text').textContent = `Room ${s.code} as "${s.nickname}". Rooms last 12 hours.`;
+  $('rejoin-bar').classList.remove('hidden');
+  $('btn-rejoin-dismiss').onclick = ()=>{ forgetSession(); $('rejoin-bar').classList.add('hidden'); sndClick(); };
+  $('btn-rejoin').onclick = async ()=>{
+    sndClick();
+    App.nickname = s.nickname;
+    App.roomCode = s.code;
+    App.mode = 'online';
+    App.role = 'joiner';
+    $('rejoin-bar').classList.add('hidden');
+    await joinRoom();
+  };
+})();
+
+/* ---- Personal stats (local to this device) ---- */
+const STATS_KEY = 'dr4fter_stats';
+function loadStats(){
+  try{ return JSON.parse(localStorage.getItem(STATS_KEY) || 'null') || { games:0, wins:0, losses:0, ties:0, spent:0, items:0, byTheme:{}, bestSteal:null, biggestSplurge:null }; }
+  catch(e){ return { games:0, wins:0, losses:0, ties:0, spent:0, items:0, byTheme:{}, bestSteal:null, biggestSplurge:null }; }
+}
+function saveStats(s){ try{ localStorage.setItem(STATS_KEY, JSON.stringify(s)); }catch(e){} }
+// called once per finished game, for the local player's own side
+function recordGameResult(themeLabel, myItems, myBudget, outcome){
+  const s = loadStats();
+  s.games++;
+  if(outcome === 'win') s.wins++; else if(outcome === 'loss') s.losses++; else s.ties++;
+  s.spent += (20 - myBudget);
+  s.items += myItems.length;
+  s.byTheme[themeLabel] = s.byTheme[themeLabel] || { games:0, wins:0 };
+  s.byTheme[themeLabel].games++;
+  if(outcome === 'win') s.byTheme[themeLabel].wins++;
+  myItems.forEach(it=>{
+    if(it.paid != null && it.paid <= 2 && (!s.bestSteal || it.r > s.bestSteal.r))
+      s.bestSteal = { name: it.name, r: it.r, paid: it.paid };
+    if(it.paid != null && (!s.biggestSplurge || it.paid > s.biggestSplurge.paid))
+      s.biggestSplurge = { name: it.name, r: it.r, paid: it.paid };
+  });
+  saveStats(s);
+}
+function renderStats(){
+  const s = loadStats();
+  const body = $('stats-body');
+  if(!s.games){
+    body.innerHTML = '<div class="waiting-note">No games finished yet — play one and your record shows up here.</div>';
+    return;
+  }
+  const pct = Math.round((s.wins / s.games) * 100);
+  const themes = Object.entries(s.byTheme).sort((a,b)=>b[1].games-a[1].games);
+  const fav = themes[0];
+  body.innerHTML =
+    `<div class="stat-big">${s.wins}–${s.losses}${s.ties?'–'+s.ties:''}</div>
+     <div class="stat-sub">${pct}% win rate across ${s.games} game${s.games===1?'':'s'}</div>
+     <div class="stat-row"><span>Items drafted</span><span class="mono">${s.items}</span></div>
+     <div class="stat-row"><span>Average spend per game</span><span class="mono">$${(s.spent/s.games).toFixed(1)}</span></div>
+     ${fav ? `<div class="stat-row"><span>Most played</span><span>${escapeHtml(fav[0])} (${fav[1].games})</span></div>` : ''}
+     ${s.bestSteal ? `<div class="stat-row"><span>Best bargain</span><span>${escapeHtml(s.bestSteal.name)} — ${s.bestSteal.r}/10 for $${s.bestSteal.paid}</span></div>` : ''}
+     ${s.biggestSplurge ? `<div class="stat-row"><span>Biggest splurge</span><span>${escapeHtml(s.biggestSplurge.name)} — $${s.biggestSplurge.paid}</span></div>` : ''}
+     ${themes.length>1 ? '<div style="font-size:12px; color:var(--ink-soft); margin-top:12px;">By theme</div>' +
+        themes.map(([n,t])=>`<div class="stat-row"><span>${escapeHtml(n)}</span><span class="mono">${t.wins}/${t.games}</span></div>`).join('') : ''}`;
+}
+$('btn-stats-close').onclick = ()=>{ $('stats-overlay').classList.add('hidden'); sndClick(); };
+$('btn-stats-reset').onclick = ()=>{
+  try{ localStorage.removeItem(STATS_KEY); }catch(e){}
+  renderStats(); sndClick();
+};
+
+/* ---- How to play ---- */
+const HOWTO_KEY = 'dr4fter_howto_seen';
+function showHowTo(){ $('howto-overlay').classList.remove('hidden'); }
+function hideHowTo(){ $('howto-overlay').classList.add('hidden'); }
+$('btn-howto-close').onclick = ()=>{ hideHowTo(); sndClick(); };
+$('btn-howto-open').onclick = ()=>{ showHowTo(); sndClick(); };
+$('btn-stats-open').onclick = ()=>{ renderStats(); $('stats-overlay').classList.remove('hidden'); sndClick(); };
+$('btn-howto-never').onclick = ()=>{
+  hideHowTo(); sndClick();
+  try{ localStorage.setItem(HOWTO_KEY, '1'); }catch(e){}
+};
+(function(){
+  let seen = false;
+  try{ seen = localStorage.getItem(HOWTO_KEY) === '1'; }catch(e){ seen = false; }
+  if(seen) hideHowTo(); else showHowTo();
+})();
+
+/* Debug panel wiring — 5 taps on a trigger element opens it.
+   Two triggers: the home-screen footer, and the lot category label on the
+   bidding screen itself (no need to leave the game to open it). */
+function wireSecretTapTrigger(id, requiredTaps){
+  const el = $(id);
+  if(!el) return;
+  let taps = 0, tapTimer = null;
+  el.addEventListener('click', ()=>{
+    taps++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(()=>{ taps = 0; }, 1500);
+    if(taps>=requiredTaps){ taps = 0; $('debug-panel').classList.remove('hidden'); }
+  });
+}
+wireSecretTapTrigger('footer-debug-trigger', 5);
+wireSecretTapTrigger('lot-cat', 5);
+$('btn-debug-close').onclick = ()=> $('debug-panel').classList.add('hidden');
+$('btn-debug-clear').onclick = ()=>{ window.__debugLog = []; debugLog('Cleared.'); };
+$('btn-debug-copy').onclick = async ()=>{
+  const text = window.__debugLog.map(e=>`[${e.ts}] ${e.msg}`).join('\n') || '(empty)';
+  try{ await navigator.clipboard.writeText(text); $('btn-debug-copy').textContent = 'Copied!'; }
+  catch(e){ $('btn-debug-copy').textContent = 'Copy failed'; }
+  setTimeout(()=>{ $('btn-debug-copy').textContent = 'Copy'; }, 1400);
+};
+
+/* ============ DEBUG CONSOLE COMMANDS ============ */
+// Cheatsheet: what's still available in the category currently being drafted.
+// Item data lives in the page already, so this needs no server round-trip.
+// `reveal` — the actual draw order of what's still to come, in sequence.
+// (`list` shows what's available sorted by rating; this shows what's NEXT.)
+function revealUpcoming(){
+  let queue, catThemeKey, themeKey, cat, hostPicks = false;
+
+  if(App.mode==='practice'){
+    const P = App.practice;
+    if(!P){ debugLog('No practice game running.'); return; }
+    catThemeKey = P.catThemeKey; themeKey = App.themeKey;
+    cat = P.currentLot ? P.currentLot.cat : (catThemeKey ? CATEGORY_THEMES[catThemeKey].cats[P.catIdx] : null);
+    const pending = (P.pendingNext && P.pendingNext[cat || '_']) || [];
+    const rest = catThemeKey ? (P.candidates || []) : (P.itemPool || []);
+    queue = pending.concat(rest).map(it => [it[0], it[1]]);
+  } else {
+    const room = App.lastRoom;
+    if(!room || !room.game){ debugLog('No online game state yet — wait for the next refresh.'); return; }
+    const g = room.game;
+    hostPicks = room.players.some(p => p.role === 'host');
+    catThemeKey = CATEGORY_THEMES[room.theme.key] ? room.theme.key : null;
+    themeKey = room.theme.key;
+    cat = g.currentLot ? g.currentLot.cat : (catThemeKey ? CATEGORY_THEMES[catThemeKey].cats[g.catIdx] : null);
+    const pending = (g.pendingNext && g.pendingNext[cat || '_']) || [];
+    const rest = catThemeKey ? (g.catQueue || []) : (g.itemPool || []);
+    queue = pending.concat(rest).map(it => Array.isArray(it) ? [it[0], it[1]] : [it.name, it.r]);
+  }
+
+  if(hostPicks){
+    debugLog('This room has a host, so there is no fixed queue — the host chooses each lot. Use "list" to see what they can pick from.');
+    return;
+  }
+
+  const where = catThemeKey ? ` in ${catShortLabel(catThemeKey, cat)}` : '';
+  if(!queue.length){ debugLog(`Nothing queued${where} — the next lot will start a new category or end the game.`); return; }
+
+  debugLog(`▼ Coming up${where} — in order (${queue.length} left)`);
+  debugLog('  ' + queue.slice(0, 25).map((e,i)=>{
+    const id = itemIdFor(e[0], themeKey) || 0;
+    return `${String(i+1).padStart(2,' ')}. #${String(id).padEnd(3,' ')} ${e[0]} (${e[1]})`;
+  }).join('\n  ') + (queue.length > 25 ? `\n  …and ${queue.length-25} more` : ''));
+}
+function listCurrentCategory(){
+  let catThemeKey, cat, draftedSet, remainingPool, themeName;
+
+  if(App.mode==='practice'){
+    const P = App.practice;
+    if(!P){ debugLog('No practice game running.'); return; }
+    catThemeKey = P.catThemeKey;
+    cat = P.currentLot ? P.currentLot.cat : (catThemeKey ? CATEGORY_THEMES[catThemeKey].cats[P.catIdx] : null);
+    themeName = P.themeName;
+    draftedSet = draftedNamesPractice(P);
+    remainingPool = catThemeKey ? null : (P.itemPool||[]).map(it=>[it[0], it[1]]);
+  } else {
+    const room = App.lastRoom;
+    if(!room || !room.game){ debugLog('No online game state yet — wait for the next refresh.'); return; }
+    catThemeKey = CATEGORY_THEMES[room.theme.key] ? room.theme.key : null;
+    const g = room.game;
+    cat = g.currentLot ? g.currentLot.cat : (catThemeKey ? CATEGORY_THEMES[catThemeKey].cats[g.catIdx] : null);
+    themeName = room.theme.name;
+    draftedSet = new Set();
+    room.players.forEach(p=>(p.items||[]).forEach(it=>draftedSet.add(it.name)));
+    remainingPool = catThemeKey ? null : (g.itemPool||[]).map(it=>[it.name, it.r]);
+  }
+
+  let entries, header;
+  if(catThemeKey){
+    const ct = CATEGORY_THEMES[catThemeKey];
+    entries = (ct.pool[cat]||[]).concat(ct.icons ? (ct.icons[cat]||[]) : []);
+    header = `${roleLabel(catThemeKey, cat)} — ${entries.length} in pool`;
+  } else {
+    entries = remainingPool || [];
+    header = `${themeName} — ${entries.length} left in the pool`;
+  }
+
+  const idTheme = catThemeKey || (App.mode==='practice' ? App.themeKey : (App.lastRoom && App.lastRoom.theme.key));
+  const withIds = e => ({ id: itemIdFor(e[0], idTheme) || 0, name: e[0], r: e[1] });
+  const avail = entries.filter(e=>!draftedSet.has(e[0])).map(withIds).sort((a,b)=>a.id-b.id);
+  const taken = entries.filter(e=>draftedSet.has(e[0])).map(withIds).sort((a,b)=>a.id-b.id);
+  debugLog(header + '  —  use: next <id>');
+  if(!avail.length) debugLog('  (nothing available)');
+  else debugLog('  ' + avail.map(e=>`${String(e.id).padStart(3,' ')}  ${e.name} (${e.r})`).join('\n  '));
+  if(taken.length) debugLog(`  drafted: ${taken.map(e=>'#'+e.id+' '+e.name).join(', ')}`);
+}
+function findAndPullPlain(pool, nameSubstr){
+  if(!pool) return null;
+  const lower = nameSubstr.toLowerCase();
+  const idx = pool.findIndex(it => (it[0]||'').toLowerCase().includes(lower));
+  if(idx===-1) return null;
+  return pool.splice(idx,1)[0];
+}
+function runDebugCommand(raw){
+  raw = (raw||'').trim();
+  if(!raw) return;
+  debugLog(`> ${raw}`);
+  const parts = raw.split(/\s+/);
+  const cmd = (parts[0]||'').toLowerCase();
+  const rest = parts.slice(1).join(' ');
+  if(cmd==='list' || cmd==='items'){ listCurrentCategory(); return; }
+  if(cmd==='reveal'){ revealUpcoming(); return; }
+  if(cmd==='help'){
+    debugLog('reveal · list · finish · next <id> · steal <id> · give <id> [nickname] · swap <id1> <id2> · swapall · money <amt> [nickname] · state');
+    return;
+  }
+  if(App.mode==='practice') runDebugCommandPractice(cmd, rest);
+  else if(App.mode==='online') runDebugCommandOnline(cmd, rest);
+  else debugLog('No active game — start a Practice game or online room first.');
+}
+function resolveTokenPractice(P, token){
+  const themeKey = P.catThemeKey || App.themeKey;
+  const t = String(token||'').trim();
+  if(!t) return { error:'Missing item' };
+  if(/^\d+$/.test(t)){
+    const rec = itemById(t);
+    if(!rec) return { error:`No item with id ${t}.` };
+    if(rec.themeKey !== themeKey) return { error:`#${rec.id} "${rec.name}" belongs to a different theme.` };
+    return { rec };
+  }
+  const lower = t.toLowerCase();
+  const all = Object.keys(ITEM_BY_ID).map(k=>ITEM_BY_ID[k])
+    .filter(r=>r.themeKey===themeKey && r.name.toLowerCase().includes(lower));
+  if(!all.length) return { error:`No match for "${t}" in this theme.` };
+  return { rec: all[0] };
+}
+function findHolderPractice(P, name){
+  for(let si=0; si<P.players.length; si++){
+    const ii = P.players[si].items.findIndex(it=>it.name===name);
+    if(ii>-1) return { sideIdx:si, itemIdx:ii, item:P.players[si].items[ii] };
+  }
+  return null;
+}
+function runDebugCommandPractice(cmd, rest){
+  const P = App.practice;
+  if(!P){ debugLog('No practice game running.'); return; }
+  if(cmd==='money' || cmd==='money+'){
+    const parts = rest.trim().split(/\s+/);
+    const amt = parseInt(parts[0],10);
+    if(isNaN(amt)){ debugLog('Usage: money <amount> [nickname]'); return; }
+    const targetName = parts.slice(1).join(' ').trim();
+    let target = P.players[0];
+    if(targetName){
+      target = P.players.find(p=>p.nick.toLowerCase()===targetName.toLowerCase());
+      if(!target){ debugLog(`No player named "${targetName}". In this game: ${P.players.map(p=>p.nick).join(', ')}`); return; }
+    }
+    target.budget = cmd==='money' ? amt : target.budget + amt;
+    if(target.budget < 0) target.budget = 0;
+    debugLog(`${target.nick}'s budget is now $${target.budget}.`);
+    if(P.currentLot) renderPracticeDraft();
+  } else if(cmd==='next'){
+    if(!rest){ debugLog('Usage: next <id or item name>'); return; }
+    const themeKey = P.catThemeKey || App.themeKey;
+    const drafted = draftedNamesPractice(P);
+    let resolved = null;
+    if(/^\d+$/.test(rest.trim())){
+      const rec = itemById(rest.trim());
+      if(!rec){ debugLog(`No item with id ${rest.trim()}.`); return; }
+      if(rec.themeKey !== themeKey){ debugLog(`#${rec.id} "${rec.name}" belongs to a different theme.`); return; }
+      resolved = rec;
+    } else {
+      const lower = rest.toLowerCase();
+      const all = Object.keys(ITEM_BY_ID).map(k=>ITEM_BY_ID[k])
+        .filter(r=>r.themeKey===themeKey && r.name.toLowerCase().includes(lower));
+      if(!all.length){ debugLog(`No match for "${rest}" in this theme.`); return; }
+      resolved = all[0];
+    }
+    if(drafted.has(resolved.name)){ debugLog(`"${resolved.name}" is already drafted.`); return; }
+    if(P.currentLot && P.currentLot.name===resolved.name){ debugLog(`"${resolved.name}" is already the current lot.`); return; }
+
+    // queue it — the lot currently being bid on is left alone
+    P.pendingNext = P.pendingNext || {};
+    const key = resolved.cat || '_';
+    P.pendingNext[key] = P.pendingNext[key] || [];
+    if(!P.pendingNext[key].some(it=>it[0]===resolved.name)){
+      P.pendingNext[key].push([resolved.name, resolved.r]);
+      const strip = arr => { if(!arr) return; const i = arr.findIndex(x=>x[0]===resolved.name); if(i>-1) arr.splice(i,1); };
+      strip(P.candidates); strip(P.itemPool);
+    }
+    debugLog(`#${resolved.id} ${resolved.name}${resolved.cat?' ('+resolved.cat+')':''} queued up next.`);
+  } else if(cmd==='finish' || cmd==='end'){
+    const drafted = draftedNamesPractice(P);
+    let filled = 0;
+    if(P.catThemeKey){
+      const ct = CATEGORY_THEMES[P.catThemeKey];
+      ct.cats.forEach(cat=>{
+        const available = shuffle(
+          (ct.pool[cat]||[]).concat(ct.icons ? (ct.icons[cat]||[]) : [])
+            .filter(p=>!drafted.has(p[0]))
+        );
+        P.players.forEach(side=>{
+          while(playerNeedsCat(side, cat, ct.required)){
+            const pick = available.shift();
+            if(!pick) break;
+            drafted.add(pick[0]);
+            side.items.push({name:pick[0], r:pick[1], cat, paid:0});
+            filled++;
+          }
+        });
+      });
+    } else {
+      const available = shuffle((P.itemPool||[]).filter(it=>!drafted.has(it[0])));
+      P.players.forEach(side=>{
+        while(side.items.length < 5){
+          const pick = available.shift();
+          if(!pick) break;
+          drafted.add(pick[0]);
+          side.items.push({name:pick[0], r:pick[1], cat:null, paid:0});
+          filled++;
+        }
+      });
+    }
+    P.mode='idle'; P.currentLot=null;
+    debugLog(filled ? `Skipped to the end — auto-filled ${filled} remaining slot${filled===1?'':'s'} for free.`
+                    : 'Skipped to the end — every slot was already filled.');
+    finishPractice();
+  } else if(cmd==='swapall'){
+    const tmp = P.players[0].items;
+    P.players[0].items = P.players[1].items;
+    P.players[1].items = tmp;
+    debugLog(`Swapped entire rosters — ${P.players[0].nick} (${P.players[0].items.length}) ⇄ ${P.players[1].nick} (${P.players[1].items.length}).`);
+    if(P.currentLot) renderPracticeDraft();
+  } else if(cmd==='give'){
+    const parts = rest.trim().split(/\s+/).filter(Boolean);
+    if(!parts.length){ debugLog('Usage: give <id> [nickname]'); return; }
+    const res = resolveTokenPractice(P, parts[0]);
+    if(res.error){ debugLog(res.error); return; }
+    const rec = res.rec;
+
+    let targetIdx = 0; // no nickname = give it to yourself
+    const targetName = parts.slice(1).join(' ').trim();
+    if(targetName){
+      targetIdx = P.players.findIndex(pl => pl.nick.toLowerCase() === targetName.toLowerCase());
+      if(targetIdx < 0){ debugLog(`No player named "${targetName}". In this game: ${P.players.map(p=>p.nick).join(', ')}`); return; }
+    }
+
+    const holder = findHolderPractice(P, rec.name);
+    if(holder && holder.sideIdx === targetIdx){
+      const nk = P.players[targetIdx].nick;
+      debugLog(`${nk} already ${nk==='You'?'have':'has'} "${rec.name}".`); return;
+    }
+
+    const item = holder ? holder.item : { name: rec.name, r: rec.r, cat: rec.cat, paid: 0 };
+    if(P.catThemeKey && item.cat){
+      const ct = CATEGORY_THEMES[P.catThemeKey];
+      const have = P.players[targetIdx].items.filter(it=>it.cat===item.cat).length;
+      if(have >= ct.required[item.cat]){
+        debugLog(`${P.players[targetIdx].nick}'s ${item.cat} slot${ct.required[item.cat]>1?'s are':' is'} already full (${have}/${ct.required[item.cat]}).`); return;
+      }
+    } else if(!P.catThemeKey && P.players[targetIdx].items.length >= 5){
+      const nk = P.players[targetIdx].nick;
+      debugLog(`${nk} already ${nk==='You'?'have':'has'} 5 items.`); return;
+    }
+
+    if(holder){
+      P.players[holder.sideIdx].items.splice(holder.itemIdx, 1);
+      debugLog(`Moved #${rec.id} ${rec.name} from ${P.players[holder.sideIdx].nick} to ${P.players[targetIdx].nick}.`);
+    } else {
+      const strip = arr => { if(!arr) return; const i = arr.findIndex(x=>x[0]===rec.name); if(i>-1) arr.splice(i,1); };
+      strip(P.candidates); strip(P.itemPool);
+      if(P.pendingNext) Object.keys(P.pendingNext).forEach(k=>strip(P.pendingNext[k]));
+      debugLog(`Gave #${rec.id} ${rec.name} to ${P.players[targetIdx].nick} straight from the pool.`);
+    }
+    P.players[targetIdx].items.push(item);
+    if(P.currentLot) renderPracticeDraft();
+  } else if(cmd==='swap'){
+    const parts = rest.trim().split(/\s+/).filter(Boolean);
+    if(parts.length < 2){ debugLog('Usage: swap <id1> <id2>'); return; }
+    const a = resolveTokenPractice(P, parts[0]);
+    if(a.error){ debugLog(a.error); return; }
+    const b = resolveTokenPractice(P, parts.slice(1).join(' '));
+    if(b.error){ debugLog(b.error); return; }
+    if(a.rec.name === b.rec.name){ debugLog(`Those are the same item ("${a.rec.name}").`); return; }
+    const ha = findHolderPractice(P, a.rec.name);
+    const hb = findHolderPractice(P, b.rec.name);
+    if(!ha){ debugLog(`Nobody has drafted "${a.rec.name}" yet — nothing to swap.`); return; }
+    if(!hb){ debugLog(`Nobody has drafted "${b.rec.name}" yet — nothing to swap.`); return; }
+    if(ha.sideIdx === hb.sideIdx){ debugLog(`Both "${a.rec.name}" and "${b.rec.name}" belong to ${P.players[ha.sideIdx].nick} — a swap has to be between two different sides.`); return; }
+    if(P.catThemeKey && ha.item.cat !== hb.item.cat){ debugLog(`Can't swap a ${ha.item.cat} for a ${hb.item.cat} — swap within the same category.`); return; }
+    P.players[ha.sideIdx].items[ha.itemIdx] = hb.item;
+    P.players[hb.sideIdx].items[hb.itemIdx] = ha.item;
+    debugLog(`Swapped ${a.rec.name} (${P.players[ha.sideIdx].nick}) for ${b.rec.name} (${P.players[hb.sideIdx].nick}).`);
+    if(P.currentLot) renderPracticeDraft();
+  } else if(cmd==='steal'){
+    if(!rest){ debugLog('Usage: steal <id or item name>'); return; }
+    const themeKey = P.catThemeKey || App.themeKey;
+    let resolved = null;
+    if(/^\d+$/.test(rest.trim())){
+      const rec = itemById(rest.trim());
+      if(!rec){ debugLog(`No item with id ${rest.trim()}.`); return; }
+      if(rec.themeKey !== themeKey){ debugLog(`#${rec.id} "${rec.name}" belongs to a different theme.`); return; }
+      resolved = rec;
+    } else {
+      const lower = rest.toLowerCase();
+      const all = Object.keys(ITEM_BY_ID).map(k=>ITEM_BY_ID[k])
+        .filter(r=>r.themeKey===themeKey && r.name.toLowerCase().includes(lower));
+      if(!all.length){ debugLog(`No match for "${rest}" in this theme.`); return; }
+      resolved = all[0];
+    }
+    let ownerIdx = -1, ownerItemIdx = -1;
+    P.players.forEach((pl, si)=>{
+      const ii = pl.items.findIndex(it=>it.name===resolved.name);
+      if(ii>-1){ ownerIdx=si; ownerItemIdx=ii; }
+    });
+    if(ownerIdx===-1){ debugLog(`Nobody has drafted "${resolved.name}" yet — nothing to steal. Try "next ${resolved.id}" to put it up instead.`); return; }
+    if(ownerIdx===0){ debugLog(`You already have "${resolved.name}" — you can't steal from yourself.`); return; }
+    const stolen = P.players[ownerIdx].items[ownerItemIdx];
+    if(P.catThemeKey && stolen.cat){
+      const ct = CATEGORY_THEMES[P.catThemeKey];
+      const have = P.players[0].items.filter(it=>it.cat===stolen.cat).length;
+      if(have >= ct.required[stolen.cat]){
+        debugLog(`Your ${stolen.cat} slot${ct.required[stolen.cat]>1?'s are':' is'} already full (${have}/${ct.required[stolen.cat]}) — stealing "${resolved.name}" would put you over.`); return;
+      }
+    } else if(!P.catThemeKey && P.players[0].items.length>=5){
+      debugLog(`You already have 5 items — stealing "${resolved.name}" would put you over the cap.`); return;
+    }
+    P.players[ownerIdx].items.splice(ownerItemIdx,1);
+    P.players[0].items.push(stolen);
+    debugLog(`Stole #${resolved.id} ${resolved.name} from ${P.players[ownerIdx].nick}.`);
+    if(P.currentLot) renderPracticeDraft();
+  } else if(cmd==='state'){
+    debugLog(`Budget $${P.players[0].budget} · items: ${P.players[0].items.map(i=>i.name).join(', ')||'none'} · current lot: ${P.currentLot?P.currentLot.name:'none'}`);
+  } else {
+    debugLog(`Unknown command "${cmd}". Type "help".`);
+  }
+}
+async function runDebugCommandOnline(cmd, rest){
+  if(!['money','money+','next','steal','swap','swapall','give','finish','end','state'].includes(cmd)){ debugLog(`Unknown command "${cmd}". Type "help".`); return; }
+  if(cmd==='state'){
+    try{ const data = await api('state', {}); debugLog(JSON.stringify(data.room)); }
+    catch(e){ debugLog(`state failed: ${e.message}`); }
+    return;
+  }
+  try{
+    const seq = ++App.pollSeq;
+    const data = await api('debug', {nickname: App.nickname, cmd, arg: rest});
+    const bidders = data.room.players.filter(p=>p.role!=='host');
+    debugLog(data.notice ? data.notice
+      : cmd.startsWith('money') ? bidders.map(p=>`${p.nickname}: $${p.budget}`).join(' · ')
+      : 'OK.');
+    applyRoomIfNewest(seq, data.room);
+  }catch(e){
+    debugLog(`Command failed: ${e.message}`);
+  }
+}
+$('btn-debug-run').onclick = ()=>{
+  const v = $('debug-cmd-input').value;
+  $('debug-cmd-input').value = '';
+  runDebugCommand(v);
+};
+$('debug-cmd-input').addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); $('btn-debug-run').click(); }
+});
+
+</script>
+</body>
+</html>
