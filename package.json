@@ -1,0 +1,14 @@
+{
+  "name": "dr4fter",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dr4fter - a live ascending-auction party game",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  },
+  "type": "module"
+}

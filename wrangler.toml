@@ -1,0 +1,29 @@
+name = "dr4fter"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# static files (index.html) are served from ./public
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+# one Durable Object per room — strongly consistent, requests handled one at a
+# time, which is what removes the whole class of race conditions the Netlify
+# build had to defend against with ETags and retries.
+[[durable_objects.bindings]]
+name = "ROOM"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+# permanent snapshots for /r/<id> share links
+[[kv_namespaces]]
+binding = "RESULTS"
+id = "REPLACE_WITH_YOUR_RESULTS_KV_ID"
+
+# shared AI-learning data
+[[kv_namespaces]]
+binding = "AIPREFS"
+id = "REPLACE_WITH_YOUR_AIPREFS_KV_ID"
