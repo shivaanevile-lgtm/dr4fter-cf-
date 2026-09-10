@@ -1392,7 +1392,7 @@ $('btn-nickname-continue').onclick = async ()=>{
 async function api(action, payload){
   let res;
   try{
-    res = await fetch('/api/room', {
+    res = await fetch('/.netlify/functions/room', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(Object.assign({action, roomCode: App.roomCode}, payload||{}))
     });
@@ -1562,6 +1562,7 @@ $('btn-copy-code').onclick = async ()=>{
 function renderRoomState(room){
   if(!room) return;
   App.lastRoom = room; // used by the console's `list` command
+  if(room.phase!=='results') App.lastRenderedResultKey = null;
   if(room.phase==='lobby'){ enterLobby(room); return; }
   if(room.phase==='drafting'){ showScreen('screen-draft'); renderOnlineDraft(room); return; }
   if(room.phase==='results'){ showScreen('screen-results'); renderResultsFromRoom(room); return; }
@@ -1761,7 +1762,7 @@ function recordHumanBidToServer(winnerIdx, P){
   if(winnerIdx!==0) return; // only record human (You) raises
   try{
     // fire-and-forget: never awaited, and failures are ignored
-    fetch('/api/ai-prefs', {method:'POST', headers:{'Content-Type':'application/json'},
+    fetch('/.netlify/functions/ai-prefs', {method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({action:'record', itemKey: (P.currentLot.cat||P.themeName)+'::'+P.currentLot.name, amount: P.currentBid})
     }).catch(()=>{});
   }catch(e){}
@@ -1875,7 +1876,7 @@ async function fetchAiPref(key){
   // remember the failure so we stop retrying every single lot.
   try{
     const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    const req = fetch('/api/ai-prefs', {
+    const req = fetch('/.netlify/functions/ai-prefs', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({action:'get', itemKey:key}),
       signal: controller ? controller.signal : undefined
@@ -2460,7 +2461,7 @@ function showResultsScreen(players, P){
 // Read-only view of a permanently saved result (from a /r/XXXX link).
 async function loadSharedResult(id){
   try{
-    const res = await fetch('/api/room', {
+    const res = await fetch('/.netlify/functions/room', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ action:'result', resultId:id })
     });
@@ -2486,6 +2487,16 @@ async function loadSharedResult(id){
 }
 
 function renderResultsFromRoom(room){
+  // Polling keeps running during the results phase so other players' screens
+  // pick up a rematch automatically — but that means this fires every ~1s
+  // even though nothing changed. A full re-render would wipe out anything the
+  // player is doing on this screen right now (mid-generation "visualise this"
+  // image, a just-tapped "copied!" button state, etc). Skip the rebuild
+  // entirely when it's the exact same finished game we already drew.
+  const resultKey = room.code+'|'+(room.game.gameId||'');
+  if(App.lastRenderedResultKey === resultKey) return;
+  App.lastRenderedResultKey = resultKey;
+
   const bidders = sidesOfClient(room);
   const itemsArr = bidders.map(p=>p.items);
   const nicks = room.hostMode==='2v2'
@@ -2500,7 +2511,7 @@ function renderResultsFromRoom(room){
     themeKey: room.theme.key,
     mySideIdx: myIdx,
     shareUrl: room.game.resultId ? (location.origin + '/r/' + room.game.resultId) : '',
-    resultKey: room.code+'|'+(room.game.gameId||''),
+    resultKey,
     canRematch: !!amHostOrCreator,
     onRematch: goRematchThemePick
   });
