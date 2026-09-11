@@ -27,3 +27,8 @@ id = "401bab22bf0d4e478947362f7ce796ec"
 [[kv_namespaces]]
 binding = "AIPREFS"
 id = "dab78dec8d0f4c54b983855715c5d67f"
+
+# Cloudflare Workers AI — powers the "picture it" image on the results screen.
+# No API key: the binding is the auth.
+[ai]
+binding = "AI"
