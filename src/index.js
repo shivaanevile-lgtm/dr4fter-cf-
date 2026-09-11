@@ -16,8 +16,14 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    // Accept the Netlify-style paths too. It costs nothing and means an
+    // index.html copied over from the old build still works instead of
+    // failing with a confusing 404 from the static-asset layer.
+    const isRoomApi    = url.pathname === '/api/room'     || url.pathname === '/.netlify/functions/room';
+    const isPrefsApi   = url.pathname === '/api/ai-prefs' || url.pathname === '/.netlify/functions/ai-prefs';
+
     // ---- room API: forwarded to the Durable Object for that room code ----
-    if (url.pathname === '/api/room') {
+    if (isRoomApi) {
       if (request.method !== 'POST') return json(405, { error: 'Method not allowed' });
       let body;
       try { body = await request.json(); }
@@ -48,7 +54,7 @@ export default {
     }
 
     // ---- shared AI-learning store (plain KV; races here are harmless) ----
-    if (url.pathname === '/api/ai-prefs') {
+    if (isPrefsApi) {
       if (request.method !== 'POST') return json(405, { error: 'Method not allowed' });
       let body;
       try { body = await request.json(); }
