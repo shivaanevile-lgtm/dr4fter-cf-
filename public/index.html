@@ -6,15 +6,29 @@
 <title>Dr4fter</title>
 <style>
   :root{
-    --cream:#F5EFE3;
-    --cream-dark:#EAE1CE;
+    /* Auction-catalogue stock: aged paper, stamp red, ledger ink. */
+    --cream:#F2EBDB;
+    --cream-dark:#E6DCC6;
+    --paper:#FFFCF5;          /* the lot ticket itself, lighter than the page */
     --rust:#C1543C;
     --rust-dark:#a3402c;
-    --ink:#2B2620;
+    --stamp:#B03A2E;          /* the SOLD stamp — inkier than the brand rust */
+    --ink:#241F19;
     --ink-soft:#6b6255;
+    --ink-faint:#9a9185;
     --line:#d9cfba;
-    --green:#4c7a5a;
-    --gold:#c99a3f;
+    --line-soft:#e8dfcc;
+    --green:#3F6B4B;
+    --gold:#B8862F;
+    /* one spacing rhythm, so nothing is eyeballed */
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; }
+  }
+  /* visible keyboard focus everywhere, not just where it was remembered */
+  :where(button,input,.theme-chip,.opp-row,[tabindex]):focus-visible{
+    outline:2.5px solid var(--rust); outline-offset:2px; border-radius:6px;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   /* Without this iOS keeps double-tap-to-zoom on tappable elements and adds a
@@ -87,7 +101,9 @@
     display:block; width:100%; text-align:center; padding:14px; border-radius:8px; border:none;
     font-size:16px; font-weight:700; cursor:pointer; margin-top:10px; font-family:inherit;
   }
-  .btn-primary{ background:var(--rust); color:#fff; }
+  .btn-primary{ background:var(--rust); color:#fff; box-shadow:0 2px 0 var(--rust-dark); }
+  .btn-primary:active{ transform:translateY(2px); box-shadow:none; }
+  .btn-secondary:active{ transform:translateY(1px); }
   .btn-primary:active{ background:var(--rust-dark); }
   .btn-secondary{ background:transparent; color:var(--ink); border:1.5px solid var(--ink); }
   .btn-ghost{ background:transparent; color:var(--ink-soft); border:none; text-decoration:underline; padding:8px; }
@@ -135,7 +151,25 @@
   /* Draft screen */
   .stall-row{ margin-bottom:6px; }
 
-  .lot-card{ background:#fffdf8; border:2px solid var(--ink); border-radius:12px; padding:20px 16px; text-align:center; margin-bottom:14px; }
+  .lot-card{
+    position:relative; overflow:hidden;
+    background:var(--paper);
+    border:1.5px solid var(--ink); border-radius:3px;
+    padding:var(--s5) var(--s4) var(--s4);
+    text-align:center; margin-bottom:var(--s4);
+    box-shadow:0 1px 0 var(--line), 0 10px 22px -16px rgba(36,31,25,.5);
+  }
+  /* perforation along the top, like a torn catalogue stub */
+  .lot-card::before{
+    content:''; position:absolute; top:6px; left:0; right:0; height:1px;
+    background-image:radial-gradient(circle, var(--line) 1px, transparent 1.2px);
+    background-size:7px 7px;
+  }
+  .lot-no{
+    position:absolute; top:11px; left:12px;
+    font-family:'SF Mono',ui-monospace,monospace; font-size:10.5px;
+    color:var(--ink-faint); letter-spacing:.06em;
+  }
   .lot-card .cat{ font-size:11px; text-transform:uppercase; letter-spacing:1.5px; color:var(--ink-soft); margin-bottom:6px; }
   .lot-card .name{ font-family:Georgia,serif; font-size:22px; font-weight:700; line-height:1.25; }
   .lot-card .stars{ color:var(--gold); font-size:13px; margin-top:6px; }
@@ -161,6 +195,46 @@
   .pick-count{ font-size:12px; color:var(--ink-soft); margin-bottom:8px; font-style:italic; }
   #team-consensus-banner{ background:#fdf1ec; border:1.5px solid var(--rust); border-radius:10px; padding:11px 13px; margin-bottom:10px; text-align:center; }
   #consensus-text{ font-size:13.5px; color:var(--ink); }
+  /* ---- SOLD stamp: slams down across the lot when it resolves ---- */
+  .sold-stamp{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    pointer-events:none; z-index:3;
+  }
+  .sold-stamp span{
+    font-family:Georgia,'Times New Roman',serif; font-weight:700;
+    font-size:44px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--stamp); border:5px double var(--stamp);
+    padding:5px 18px 7px; border-radius:4px;
+    transform:rotate(-14deg) scale(2.4); opacity:0;
+    animation:stampIn .42s cubic-bezier(.2,1.5,.4,1) forwards;
+    /* worn rubber-stamp edge rather than a flat fill */
+    -webkit-mask-image:radial-gradient(circle at 22% 34%, transparent 0 2px, #000 2.4px),
+                       radial-gradient(circle at 68% 72%, transparent 0 1.6px, #000 2px);
+    -webkit-mask-composite:source-in; mask-composite:intersect;
+  }
+  .sold-stamp.free span{ color:var(--green); border-color:var(--green); }
+  .sold-stamp.steal span{ color:var(--gold); border-color:var(--gold); }
+  @keyframes stampIn{
+    0%{ transform:rotate(-30deg) scale(2.6); opacity:0; }
+    55%{ transform:rotate(-14deg) scale(.94); opacity:1; }
+    70%{ transform:rotate(-14deg) scale(1.04); }
+    100%{ transform:rotate(-14deg) scale(1); opacity:1; }
+  }
+  .lot-card.resolving{ animation:cardKnock .42s ease-out; }
+  @keyframes cardKnock{
+    0%,100%{ transform:translateY(0); }
+    52%{ transform:translateY(3px); }
+  }
+
+  /* ---- bid button reflects what you can actually afford ---- */
+  .btn-primary.afford-tight{ background:var(--gold); }
+  .btn-primary.afford-none{
+    background:var(--cream-dark); color:var(--ink-faint);
+    border:1px solid var(--line); cursor:not-allowed;
+  }
+  .afford-note{ font-size:11.5px; color:var(--ink-soft); text-align:center; margin-top:var(--s2); }
+  .afford-note.warn{ color:var(--gold); }
+  .afford-note.broke{ color:var(--stamp); }
   .bid-caption{ text-align:center; font-size:13px; color:var(--ink-soft); font-style:italic; margin-top:10px; }
 
   .status-line{ text-align:center; font-size:13px; color:var(--ink-soft); margin:10px 0; min-height:18px; }
@@ -366,6 +440,7 @@
 
     <div id="draft-active-area">
       <div class="lot-card" id="lot-card">
+        <div class="lot-no" id="lot-no"></div>
         <div class="cat" id="lot-cat"></div>
         <div class="name" id="lot-name">—</div>
         <div class="stars" id="lot-stars"></div>
@@ -383,6 +458,7 @@
           <button class="btn btn-raise" id="btn-submit-bid">Raise</button>
           <button class="btn btn-skip" id="btn-secondary-bid">Pass</button>
         </div>
+        <div class="afford-note" id="afford-note"></div>
         <div class="bid-caption" id="bid-caption">You have $20 left.</div>
       </div>
       <div id="waiting-turn" class="waiting-note hidden">Waiting for the other player…</div>
@@ -1139,6 +1215,14 @@ const $ = id => document.getElementById(id);
 const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 function shuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+// Lot numbers come from the same stable item IDs the console commands use,
+// so "Lot 087" on screen is the same 087 you can `steal` or `swap`.
+function setLotNumber(lot, themeKey){
+  const el = $('lot-no');
+  if(!el) return;
+  const id = lot ? itemIdFor(lot.name, themeKey) : null;
+  el.textContent = id ? 'Lot ' + String(id).padStart(3,'0') : '';
+}
 function stars(r){ const full=Math.round(r/2); return '★'.repeat(full)+'☆'.repeat(5-full)+' ('+r+'/10)'; }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
@@ -1745,7 +1829,26 @@ function resolveLotWinner(P, winnerIdx, amount){
   P.mode='idle'; P.currentLot=null;
   setTimeout(()=>drawNextLotPractice(), delay);
 }
+// Slam a SOLD stamp over the lot card. Colour matches the toast: green for a
+// free claim, gold for a bargain, stamp-red otherwise.
+function playSoldStamp(amount){
+  const card = $('lot-card');
+  if(!card) return;
+  const old = card.querySelector ? card.querySelector('.sold-stamp') : null;
+  if(old && old.remove) old.remove();
+  const kind = amount === 0 ? 'free' : (amount <= 2 ? 'steal' : '');
+  const word = amount === 0 ? 'Free' : 'Sold';
+  const el = document.createElement('div');
+  el.className = 'sold-stamp' + (kind ? ' ' + kind : '');
+  el.innerHTML = `<span>${word}</span>`;
+  card.appendChild(el);
+  card.classList.add('resolving');
+  setTimeout(()=>card.classList.remove('resolving'), 460);
+  setTimeout(()=>{ if(el.parentNode) el.remove(); }, 1250);
+}
+
 function showItemWonToast(nick, itemName, amount){
+  playSoldStamp(amount);
   const el = document.createElement('div');
   let variant, headline, priceLine;
   if(amount===0){ variant='variant-free'; headline='🎉 FREE!'; priceLine='for nothing'; }
@@ -1977,6 +2080,7 @@ function renderPracticeDraft(){
   $('lot-cat').textContent = P.currentLot.cat ? roleLabel(P.catThemeKey, P.currentLot.cat) : P.themeEmoji+' '+P.themeName;
   $('lot-name').textContent = P.currentLot.name;
   $('lot-stars').textContent = stars(P.currentLot.r);
+  setLotNumber(P.currentLot, App.themeKey);
 
   $('bid-display').innerHTML = '$'+P.currentBid + (P.currentBidder!==null ? `<span class="by">— currently held by ${escapeHtml(P.players[P.currentBidder].nick)}</span>` : '');
   $('ticker').textContent = P.tickerLog.length ? P.tickerLog.join(' → ') : 'New lot — place your bid';
@@ -1989,6 +2093,7 @@ function renderPracticeDraft(){
     if(P.turn===0){
       renderBidControls({
         budget: P.players[0].budget,
+        picksLeft: 5 - P.players[0].items.length,
         minAmount: P.currentBid+1,
         lotKey: P.currentLot.name+'|'+P.currentBid,
         primaryLabel: 'Raise',
@@ -2005,6 +2110,7 @@ function renderPracticeDraft(){
       const budget = P.players[0].budget;
       renderBidControls({
         budget, minAmount:1, freeMode: budget===0,
+        picksLeft: 5 - P.players[0].items.length,
         lotKey: P.currentLot.name,
         primaryLabel: 'Claim',
         secondaryLabel: `Skip it (${3-P.skipsUsed} left)`,
@@ -2055,6 +2161,7 @@ function renderBidControls(opts){
       input.dataset.lotKey = opts.lotKey || '';
     }
     primaryBtn.textContent = opts.primaryLabel;
+    input.oninput = ()=>applyAffordability(primaryBtn, opts);
     primaryBtn.onclick = ()=>{
       let amt = parseInt(input.value,10);
       if(isNaN(amt) || amt<opts.minAmount) amt = opts.minAmount;
@@ -2065,7 +2172,42 @@ function renderBidControls(opts){
   secondaryBtn.textContent = opts.secondaryLabel;
   secondaryBtn.classList.toggle('hidden', !opts.secondaryLabel);
   secondaryBtn.onclick = opts.onSecondary;
+
+  // Grade the bid button by how much room the player actually has left, so
+  // running low is visible before it becomes a surprise.
+  applyAffordability(primaryBtn, opts);
   $('bid-caption').textContent = `You have $${opts.budget} left.`;
+}
+
+// headroom = what's left after the raise they're about to make
+function applyAffordability(btn, opts){
+  const note = $('afford-note');
+  btn.classList.remove('afford-tight','afford-none');
+  note.classList.remove('warn','broke');
+  if(opts.freeMode){ note.textContent = ''; return; }
+
+  const input = $('bid-amount-input');
+  let amt = parseInt(input.value,10);
+  if(isNaN(amt)) amt = opts.minAmount;
+  const after = opts.budget - amt;
+  const picksLeft = (opts.picksLeft != null) ? opts.picksLeft : 1;
+  // $1 is the floor for each remaining pick; below that you're relying on
+  // free claims to finish your collection.
+  const needed = Math.max(0, picksLeft - 1);
+
+  if(opts.budget <= 0){
+    btn.classList.add('afford-none');
+    note.classList.add('broke');
+    note.textContent = "You're out of money — remaining lots you need come to you free.";
+  } else if(after < needed){
+    btn.classList.add('afford-tight');
+    note.classList.add('warn');
+    note.textContent = needed === 1
+      ? `Winning at $${amt} leaves $${after} for your last pick.`
+      : `Winning at $${amt} leaves $${after} for ${needed} more picks.`;
+  } else {
+    note.textContent = `$${after} would be left for ${needed || 'no'} more pick${needed===1?'':'s'}.`;
+  }
 }
 function hideBidControls(){
   $('bid-controls').classList.add('hidden');
@@ -2225,6 +2367,7 @@ function renderOnlineDraft(room){
   $('lot-cat').textContent = g.currentLot.cat ? roleLabel(room.theme.key, g.currentLot.cat) : (room.theme.emoji||'🎯')+' '+room.theme.name;
   $('lot-name').textContent = g.currentLot.name;
   $('lot-stars').textContent = stars(g.currentLot.r);
+  setLotNumber(g.currentLot, room.theme.key);
   $('bid-display').innerHTML = '$'+g.currentBid + (g.currentBidderIdx!==null && g.currentBidderIdx!==undefined ? `<span class="by">— currently held by ${escapeHtml(sideLabelClient(room, g.currentBidderIdx))}</span>` : '');
   $('ticker').textContent = (g.tickerLog&&g.tickerLog.length) ? g.tickerLog.join(' → ') : 'New lot — place your bid';
 
@@ -2245,6 +2388,7 @@ function renderOnlineDraft(room){
       renderTeamConsensusBanner(room, myIdx);
       renderBidControls({
         budget: bidders[myIdx].budget,
+        picksLeft: 5 - (bidders[myIdx].items||[]).length,
         minAmount: g.currentBid+1,
         lotKey: g.currentLot.name+'|'+g.currentBid,
         primaryLabel: 'Raise',
@@ -2264,6 +2408,7 @@ function renderOnlineDraft(room){
       renderTeamConsensusBanner(room, myIdx);
       renderBidControls({
         budget, minAmount:1, freeMode: budget===0,
+        picksLeft: 5 - (bidders[myIdx].items||[]).length,
         lotKey: g.currentLot.name,
         primaryLabel: 'Claim',
         secondaryLabel: canSkip ? `Skip it (${3-(g.skipsUsed||0)} left)` : '',
