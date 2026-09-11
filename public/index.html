@@ -1392,7 +1392,7 @@ $('btn-nickname-continue').onclick = async ()=>{
 async function api(action, payload){
   let res;
   try{
-    res = await fetch('/.netlify/functions/room', {
+    res = await fetch('/api/room', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(Object.assign({action, roomCode: App.roomCode}, payload||{}))
     });
@@ -1762,7 +1762,7 @@ function recordHumanBidToServer(winnerIdx, P){
   if(winnerIdx!==0) return; // only record human (You) raises
   try{
     // fire-and-forget: never awaited, and failures are ignored
-    fetch('/.netlify/functions/ai-prefs', {method:'POST', headers:{'Content-Type':'application/json'},
+    fetch('/api/ai-prefs', {method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({action:'record', itemKey: (P.currentLot.cat||P.themeName)+'::'+P.currentLot.name, amount: P.currentBid})
     }).catch(()=>{});
   }catch(e){}
@@ -1876,7 +1876,7 @@ async function fetchAiPref(key){
   // remember the failure so we stop retrying every single lot.
   try{
     const controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-    const req = fetch('/.netlify/functions/ai-prefs', {
+    const req = fetch('/api/ai-prefs', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({action:'get', itemKey:key}),
       signal: controller ? controller.signal : undefined
@@ -2461,7 +2461,7 @@ function showResultsScreen(players, P){
 // Read-only view of a permanently saved result (from a /r/XXXX link).
 async function loadSharedResult(id){
   try{
-    const res = await fetch('/.netlify/functions/room', {
+    const res = await fetch('/api/room', {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ action:'result', resultId:id })
     });
