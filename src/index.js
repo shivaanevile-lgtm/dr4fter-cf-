@@ -77,6 +77,36 @@ export default {
       return json(400, { error: 'Unknown action' });
     }
 
+    // ---- image generation, run on Cloudflare's own models ----
+    // Better prompt adherence than the public free endpoint we used before,
+    // and it runs on this account rather than someone else's service.
+    if (url.pathname === '/api/image') {
+      if (request.method !== 'POST') return json(405, { error: 'Method not allowed' });
+      if (!env.AI) return json(503, { error: 'Image generation is not configured on this deployment.' });
+      let body;
+      try { body = await request.json(); }
+      catch (e) { return json(400, { error: 'Bad JSON' }); }
+      const prompt = String(body.prompt || '').trim().slice(0, 1500);
+      if (!prompt) return json(400, { error: 'Missing prompt' });
+      try {
+        const out = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', {
+          prompt,
+          steps: 6                       // schnell is built for few steps; 6 is a good quality/latency point
+        });
+        // the model returns base64; hand back a real image so the client can
+        // just point an <img> at it
+        const bytes = Uint8Array.from(atob(out.image), c => c.charCodeAt(0));
+        return new Response(bytes, {
+          headers: {
+            'Content-Type': 'image/jpeg',
+            'Cache-Control': 'public, max-age=31536000, immutable'
+          }
+        });
+      } catch (e) {
+        return json(502, { error: 'Could not generate an image right now: ' + (e.message || 'model error') });
+      }
+    }
+
     // ---- permanent result links: /r/ABC123 serves the app, which reads the path ----
     if (url.pathname.startsWith('/r/')) {
       return env.ASSETS.fetch(new Request(new URL('/index.html', request.url), request));
