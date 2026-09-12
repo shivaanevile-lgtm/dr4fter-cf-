@@ -147,7 +147,9 @@ export class Room {
         room.chat = room.chat || [];
         room.chat.push({ sys: true, text: 'The draft has started', at: Date.now() });
         await this.save(room);
-        return json(200, { room });
+        // hosted rooms need the pick list straight away, or the host stares at
+        // "Loading options…" until the next poll
+        return json(200, { room, options: room.game.awaitingHostPick ? hostPickOptions(room) : null });
       }
 
       if (action === 'kick') {
