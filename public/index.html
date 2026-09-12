@@ -1918,7 +1918,24 @@ function showJoinedToast(nick){
   requestAnimationFrame(()=>el.classList.add('show'));
   setTimeout(()=>el.remove(), 1500);
 }
-$('btn-lobby-leave').onclick = ()=>{ stopPolling(); App.roomCode=null; forgetSession(); showScreen('screen-home'); };
+// Tell the server before we tear down local state, otherwise the room keeps
+// showing people who have gone — the seat never frees up.
+async function leaveRoom(){
+  const code = App.roomCode, nick = App.nickname;
+  stopPolling();
+  App.roomCode = null; App.mode = null;
+  forgetSession();
+  showScreen('screen-home');
+  if(code && nick){
+    try{
+      await fetch('/api/room', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'leave', roomCode: code, nickname: nick })
+      });
+    }catch(e){ /* best effort — the room expires on its own anyway */ }
+  }
+}
+$('btn-lobby-leave').onclick = ()=>{ sndClick(); leaveRoom(); };
 function joinUrlFor(code){ return location.origin + '/?join=' + code; }
 $('btn-show-qr').onclick = ()=>{
   const wrap = $('qr-wrap'), box = $('qr-box'), btn = $('btn-show-qr');
@@ -3205,7 +3222,7 @@ function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
 
   $('btn-rematch').classList.toggle('hidden', opts.canRematch===false);
   $('btn-rematch').onclick = opts.onRematch;
-  $('btn-home').onclick = ()=>{ stopPolling(); App.roomCode=null; App.mode=null; forgetSession(); showScreen('screen-home'); };
+  $('btn-home').onclick = ()=>{ if(App.mode==='online' && App.roomCode) leaveRoom(); else { stopPolling(); App.roomCode=null; App.mode=null; forgetSession(); showScreen('screen-home'); } };
 }
 
 
@@ -3389,6 +3406,17 @@ updateHomeForRematch();
     await joinRoom();
   };
 })();
+
+// Closing the tab or backgrounding the app: fire a best-effort leave so the
+// lobby doesn't keep a ghost. sendBeacon survives page teardown; fetch often
+// doesn't.
+window.addEventListener('pagehide', ()=>{
+  if(App.mode!=='online' || !App.roomCode || !App.nickname) return;
+  try{
+    const body = JSON.stringify({ action:'leave', roomCode: App.roomCode, nickname: App.nickname });
+    if(navigator.sendBeacon) navigator.sendBeacon('/api/room', new Blob([body], {type:'application/json'}));
+  }catch(e){}
+});
 
 /* ---- Chat: same component in the lobby and mid-draft ---- */
 function chatMarkup(id){
