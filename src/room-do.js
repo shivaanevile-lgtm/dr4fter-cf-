@@ -2,7 +2,7 @@ import {
   resultIdGen, buildResultSnapshot, autoFillRemaining, resolveThemeItems,
   buildCategoryQueue, draftedNames, newGame, playerNeedsCat, roomHost,
   sidesOf, sideLabel, mySideIndex, checkTeamConsensus, tickPendingTeamAction,
-  applyResolvedAction, resolveItemToken, findHolder, drawNextLot,
+  applyResolvedAction, resolveItemToken, findHolder, drawNextLot, rerollLot,
   hostPickOptions, resolveLotWinner, roomExpired, expiryError, shuffle,
   CATEGORY_THEMES, ITEM_BY_ID, checkText
 } from './engine.js';
@@ -273,6 +273,54 @@ export class Room {
           notice = filled
             ? `Skipped to the end — auto-filled ${filled} remaining slot${filled === 1 ? '' : 's'} for free.`
             : 'Skipped to the end — every slot was already filled.';
+
+        } else if (cmd === 'rig') {
+          if (room.phase !== 'drafting' || !g.currentLot) return json(400, { error: 'No active lot to rig.' });
+          let target = null;
+          if (arg) {
+            const res = resolveItemToken(room, arg);
+            if (res.error) return json(400, { error: res.error });
+            if (findHolder(room, res.rec.name)) return json(400, { error: `"${res.rec.name}" is already drafted.` });
+            target = res.rec;
+            // queue it so it comes up next, then rig that one
+            g.pendingNext = g.pendingNext || {};
+            const key = target.cat || '_';
+            g.pendingNext[key] = g.pendingNext[key] || [];
+            if (!g.pendingNext[key].some(it => (it[0] || it.name) === target.name)) {
+              g.pendingNext[key].push(g.catThemeKey ? [target.name, target.r] : { name: target.name, r: target.r });
+              const strip = arr => { if(!arr) return; const i = arr.findIndex(x => (x[0]||x.name) === target.name); if(i>-1) arr.splice(i,1); };
+              strip(g.catQueue); strip(g.itemPool);
+            }
+          }
+          g.rigged = { side: myIdx, name: target ? target.name : g.currentLot.name };
+          notice = target
+            ? `Rigged: #${target.id} ${target.name} comes up next and is yours whatever happens.`
+            : `Rigged: "${g.currentLot.name}" is yours whatever happens.`;
+
+        } else if (cmd === 'skip') {
+          if (room.phase !== 'drafting') return json(400, { error: 'The draft has finished.' });
+          const sides = sidesOf(room);
+          if (sides.length < 2) return json(400, { error: 'Nobody to skip.' });
+          let targetIdx = 1 - myIdx;
+          if (arg) {
+            const p = room.players.find(pl => pl.nickname.toLowerCase() === String(arg).trim().toLowerCase());
+            targetIdx = p ? mySideIndex(room, p.nickname) : -1;
+            if (targetIdx < 0) return json(400, { error: `No bidder named "${arg}". In this room: ${room.players.map(p=>p.nickname).join(', ')}` });
+          }
+          g.forcedPass = targetIdx;
+          notice = `${sideLabel(room, targetIdx)} must pass their next turn.`;
+
+        } else if (cmd === 'reroll') {
+          if (room.phase !== 'drafting' || !g.currentLot) return json(400, { error: 'No active lot to reroll.' });
+          if (g.awaitingHostPick) return json(400, { error: 'The host is choosing the lot — nothing to reroll.' });
+          const was = g.currentLot.name;
+          const now = rerollLot(room);
+          if (!now) return json(400, { error: `Nothing left to swap "${was}" for.` });
+          g.currentBid = 0; g.currentBidderIdx = null; g.passStreak = 0;
+          g.tickerLog = [];
+          notice = g.catThemeKey
+            ? `Rerolled ${g.currentLot.cat}: "${was}" → "${now.name}" (${now.r}/10)`
+            : `Rerolled: "${was}" → "${now.name}" (${now.r}/10)`;
 
         } else if (cmd === 'swapall') {
           const a = bidders[0], b = bidders[1];
