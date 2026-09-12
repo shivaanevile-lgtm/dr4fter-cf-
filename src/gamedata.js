@@ -580,10 +580,11 @@ function normalizeTokens(s){
     .split(/[^a-z]+/).filter(Boolean);
 }
 // Returns null if the text is fine, or a reason string if it should be rejected.
-function checkText(raw, label){
+function checkText(raw, label, maxLen){
+  const lim = maxLen || 60;
   const t = String(raw||'').trim();
   if(!t) return `${label} can't be empty.`;
-  if(t.length > 60) return `${label} is too long (60 characters max).`;
+  if(t.length > lim) return `${label} is too long (${lim} characters max).`;
   const flat = normalizeForFilter(t);
   for(const w of BLOCKED_SUBSTRINGS){
     if(flat.indexOf(w) > -1) return `That ${label.toLowerCase()} contains language that isn't allowed — try something else.`;
