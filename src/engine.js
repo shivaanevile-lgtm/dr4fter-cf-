@@ -204,6 +204,14 @@ function tickPendingTeamAction(room){
 // timeout path so they can never drift out of sync with each other.
 function applyResolvedAction(room, sideIdx, type, amount){
   const g = room.game;
+  // `skip` makes a side forfeit its next turn — whatever it tried becomes a pass.
+  if (g.forcedPass === sideIdx && type !== 'pass') {
+    g.forcedPass = null;
+    g.tickerLog.push(`${sideLabel(room, sideIdx)}: forced pass`);
+    type = 'pass'; amount = null;
+  } else if (g.forcedPass === sideIdx) {
+    g.forcedPass = null;
+  }
   const bidders = sidesOf(room);
   if (type === 'raise') {
     g.currentBid = amount; g.currentBidderIdx = sideIdx; g.passStreak = 0;
@@ -357,6 +365,12 @@ function startLotMode(g, wanting){
 function resolveLotWinner(room, winnerIdx, amount){
   const g = room.game;
   const bidders = sidesOf(room);
+  // `rig` overrides the auction outcome for one lot, then clears itself.
+  if (g.rigged && (!g.rigged.name || g.rigged.name === (g.currentLot && g.currentLot.name))) {
+    winnerIdx = g.rigged.side;
+    amount = Math.min(amount, bidders[winnerIdx].budget);
+    g.rigged = null;
+  }
   const winner = bidders[winnerIdx];
   winner.budget -= amount;
   winner.items.push({ name: g.currentLot.name, r: g.currentLot.r, cat: g.currentLot.cat, paid: amount });
@@ -365,6 +379,28 @@ function resolveLotWinner(room, winnerIdx, amount){
   g.mode = 'idle'; g.currentLot = null;
   drawNextLot(room);
 }
+// Swap the live lot for another candidate, recycling the current one to the
+// back of the queue. Same mechanic as the in-game Skip button, but callable
+// at any time and without spending a skip.
+function rerollLot(room){
+  const g = room.game;
+  if (!g.currentLot) return null;
+  const cat = g.currentLot.cat;
+  const passedOver = g.currentLot;
+  if (g.catThemeKey) {
+    const cand = g.catQueue.shift();
+    if (!cand) return null;
+    g.catQueue.push([passedOver.name, passedOver.r]);
+    g.currentLot = { name: cand[0], r: cand[1], cat };
+  } else {
+    const cand = g.itemPool.shift();
+    if (!cand) return null;
+    g.itemPool.push({ name: passedOver.name, r: passedOver.r });
+    g.currentLot = { name: cand.name, r: cand.r, cat: null };
+  }
+  return g.currentLot;
+}
+
 function unsoldLot(room){
   const g = room.game;
   // Recycle rather than discard, or a run of double-passes can drain the
@@ -392,7 +428,7 @@ export {
   resolveThemeItems, buildCategoryQueue, draftedNames, newGame,
   playerNeedsFlat, playerNeedsCat, roomHost, sidesOf, sideLabel, mySideIndex,
   checkTeamConsensus, tickPendingTeamAction, applyResolvedAction,
-  resolveItemToken, findHolder, drawNextLot, hostPickOptions, startLotMode,
+  resolveItemToken, findHolder, drawNextLot, rerollLot, hostPickOptions, startLotMode,
   resolveLotWinner, unsoldLot, roomExpired, expiryError,
   ROOM_TTL_MS, THEMES, CATEGORY_THEMES, ITEM_BY_ID, checkText
 };
