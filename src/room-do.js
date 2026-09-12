@@ -71,6 +71,7 @@ export class Room {
             : [{ nickname: body.nickname, role: hostMode === '3p' ? 'host' : 'creator', budget: 20, items: [] }],
           teams: hostMode === '2v2' ? [{ budget: 20, items: [] }, { budget: 20, items: [] }] : undefined,
           game: null,
+          chat: [],
           createdAt: Date.now(),
           rev: 1
         };
@@ -93,6 +94,10 @@ export class Room {
       if (room.hostMode === '2v2' && tickPendingTeamAction(room)) await this.save(room);
 
       if (action === 'state') {
+        if (body.nickname && (room.kicked || []).includes(body.nickname)
+            && !room.players.some(p => p.nickname === body.nickname)) {
+          return json(403, { error: 'The host removed you from this room.', kicked: true });
+        }
         await this.persistResultIfFinished(room);
         if (room.game && room.game.resultSaved) await this.save(room);
         const opts = (room.game && room.game.awaitingHostPick) ? hostPickOptions(room) : null;
@@ -116,13 +121,68 @@ export class Room {
         } else {
           room.players.push({ nickname: body.nickname, role: 'bidder', budget: 20, items: [] });
         }
-        if (room.players.length === needed) {
-          room.phase = 'drafting';
-          if (room.hostMode === '2v2') room.teams = [{ budget: 20, items: [] }, { budget: 20, items: [] }];
-          room.game = newGame(resolveThemeItems({ themeKey: room.theme.key, customTheme: room.theme.custom }));
-          room.game.resultId = resultIdGen();
-          drawNextLot(room);
+        // The game no longer starts itself — the host presses Start. That's what
+        // makes kicking useful: a full room can still be reshuffled first.
+        room.chat = room.chat || [];
+        room.chat.push({ sys: true, text: `${body.nickname} joined`, at: Date.now() });
+        await this.save(room);
+        return json(200, { room });
+      }
+
+      if (action === 'start') {
+        const requester = room.players.find(p => p.nickname === body.nickname);
+        if (!requester || (requester.role !== 'host' && requester.role !== 'creator')) {
+          return json(403, { error: 'Only the host can start the game' });
         }
+        if (room.phase !== 'lobby') return json(400, { error: 'The game has already started' });
+        const needed = room.hostMode === '3p' ? 3 : room.hostMode === '2v2' ? 4 : 2;
+        if (room.players.length < needed) {
+          return json(400, { error: `Need ${needed} players to start — ${room.players.length} so far.` });
+        }
+        room.phase = 'drafting';
+        if (room.hostMode === '2v2') room.teams = [{ budget: 20, items: [] }, { budget: 20, items: [] }];
+        room.game = newGame(resolveThemeItems({ themeKey: room.theme.key, customTheme: room.theme.custom }));
+        room.game.resultId = resultIdGen();
+        drawNextLot(room);
+        room.chat = room.chat || [];
+        room.chat.push({ sys: true, text: 'The draft has started', at: Date.now() });
+        await this.save(room);
+        return json(200, { room });
+      }
+
+      if (action === 'kick') {
+        const requester = room.players.find(p => p.nickname === body.nickname);
+        if (!requester || (requester.role !== 'host' && requester.role !== 'creator')) {
+          return json(403, { error: 'Only the host can remove players' });
+        }
+        if (room.phase !== 'lobby') return json(400, { error: 'You can only remove players before the draft starts' });
+        const target = String(body.target || '');
+        if (target === body.nickname) return json(400, { error: "You can't remove yourself — leave the room instead." });
+        const idx = room.players.findIndex(p => p.nickname === target);
+        if (idx < 0) return json(400, { error: `${target} isn't in this room.` });
+        room.players.splice(idx, 1);
+        // 2v2 seats must stay balanced after a removal
+        if (room.hostMode === '2v2') {
+          const counts = [0, 0];
+          room.players.forEach(p => { p.team = counts[0] <= counts[1] ? 0 : 1; counts[p.team]++; });
+        }
+        room.kicked = room.kicked || [];
+        room.kicked.push(target);
+        room.chat = room.chat || [];
+        room.chat.push({ sys: true, text: `${target} was removed by the host`, at: Date.now() });
+        await this.save(room);
+        return json(200, { room });
+      }
+
+      if (action === 'chat') {
+        const me = room.players.find(p => p.nickname === body.nickname);
+        if (!me) return json(403, { error: 'Not in this room' });
+        const bad = checkText(body.text, 'Message', 140);
+        if (bad) return json(400, { error: bad });
+        room.chat = room.chat || [];
+        room.chat.push({ nick: body.nickname, text: String(body.text).trim().slice(0, 140), at: Date.now() });
+        // keep the log short; nobody scrolls back further than this
+        if (room.chat.length > 60) room.chat = room.chat.slice(-60);
         await this.save(room);
         return json(200, { room });
       }
