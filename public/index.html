@@ -390,6 +390,20 @@
   .waiting-note{ text-align:center; font-size:13px; color:var(--chalk-soft); padding:var(--s4) 0; font-style:italic; }
   .pitch{ width:100%; height:auto; border-radius:10px; border:1px solid var(--line); display:block; }
 
+  .chat-box{ background:var(--deck); border:1px solid var(--line); border-radius:12px; margin-top:var(--s3); overflow:hidden; }
+  .chat-head{ display:flex; justify-content:space-between; align-items:center; padding:9px var(--s3);
+    font-size:11.5px; color:var(--chalk-soft); letter-spacing:.08em; cursor:pointer; }
+  .chat-head .unread{ background:var(--volt); color:#12213B; border-radius:20px; padding:1px 7px; font-weight:700; font-size:10.5px; }
+  .chat-log{ max-height:150px; overflow-y:auto; padding:0 var(--s3) var(--s2); }
+  .chat-msg{ font-size:13px; padding:3px 0; line-height:1.4; word-break:break-word; }
+  .chat-msg .who{ font-weight:650; color:var(--volt); margin-right:5px; }
+  .chat-msg.me .who{ color:var(--mint); }
+  .chat-msg.sys{ color:var(--chalk-soft); font-style:italic; font-size:12px; }
+  .chat-row{ display:flex; gap:6px; padding:var(--s2) var(--s3) var(--s3); border-top:1px solid var(--line-soft); }
+  .chat-row input{ flex:1; padding:10px var(--s3); font-size:15px; }
+  .chat-row button{ padding:10px var(--s4); background:var(--volt); color:#12213B; border:none; border-radius:10px; font-weight:700; cursor:pointer; }
+  .kick-btn{ background:none; border:1px solid var(--line); color:var(--chalk-soft);
+    border-radius:8px; font-size:11px; padding:3px 9px; cursor:pointer; margin-left:8px; }
   .footer-note{ text-align:center; font-size:11.5px; color:var(--chalk-soft); margin-top:var(--s5); }
 </style>
 </head>
@@ -516,6 +530,8 @@
       <p style="font-size:13px; color:var(--chalk-soft);">Share this code with the other player<span id="lobby-plural"></span>.</p>
       <div id="lobby-players" style="margin:14px 0;"></div>
       <div class="waiting-note" id="lobby-waiting">Waiting for players to join…</div>
+      <button class="btn btn-primary hidden" id="btn-start-game">Start the draft</button>
+      <div id="lobby-chat"></div>
       <button class="btn btn-ghost" id="btn-lobby-leave">← leave room</button>
     </div>
   </div>
@@ -1216,10 +1232,11 @@ function normalizeTokens(s){
     .split(/[^a-z]+/).filter(Boolean);
 }
 // Returns null if the text is fine, or a reason string if it should be rejected.
-function checkText(raw, label){
+function checkText(raw, label, maxLen){
+  const lim = maxLen || 60;
   const t = String(raw||'').trim();
   if(!t) return `${label} can't be empty.`;
-  if(t.length > 60) return `${label} is too long (60 characters max).`;
+  if(t.length > lim) return `${label} is too long (${lim} characters max).`;
   const flat = normalizeForFilter(t);
   for(const w of BLOCKED_SUBSTRINGS){
     if(flat.indexOf(w) > -1) return `That ${label.toLowerCase()} contains language that isn't allowed — try something else.`;
@@ -1807,11 +1824,15 @@ async function pollRoom(){
   App.pollInFlight = true;
   const seq = ++App.pollSeq;
   try{
-    const data = await api('state', {});
+    const data = await api('state', { nickname: App.nickname });
     if(data.options) App.hostPickOptions = data.options;
     applyRoomIfNewest(seq, data.room);
   }catch(e){
     // an expired or missing room won't fix itself — stop polling and say so
+    if(/removed you from this room/i.test(e.message||'')){
+      stopPolling(); App.roomCode=null; App.mode=null; forgetSession();
+      alert(e.message); showScreen('screen-home'); return;
+    }
     if(/has expired|no room with code/i.test(e.message||'')){
       stopPolling(); App.roomCode = null; App.mode = null; forgetSession();
       alert(e.message);
@@ -1851,17 +1872,42 @@ function renderLobbyPlayers(room){
   }
   App.lobbySeenNicks = curNicks;
   if(room.hostMode==='2v2'){
+    const canKick = room.players.some(p=>p.nickname===App.nickname && (p.role==='host'||p.role==='creator'));
     const teamHTML = teamIdx => room.players.filter(p=>p.team===teamIdx)
-      .map(p=>`<div style="padding:4px 0;">👤 <b>${escapeHtml(p.nickname)}</b></div>`).join('')
+      .map(p=>`<div style="padding:4px 0; display:flex; align-items:center;">
+        <span style="flex:1;">👤 <b>${escapeHtml(p.nickname)}</b></span>
+        ${canKick && p.nickname!==App.nickname ? `<button class="kick-btn" data-kick="${escapeHtml(p.nickname)}">remove</button>` : ''}
+      </div>`).join('')
       || '<div style="padding:4px 0; color:var(--chalk-soft); font-style:italic;">— open seat —</div>';
     wrap.innerHTML = `
       <div class="player-card" style="text-align:left; margin-bottom:8px;"><b>Team A</b>${teamHTML(0)}</div>
       <div class="player-card" style="text-align:left;"><b>Team B</b>${teamHTML(1)}</div>`;
   } else {
-    wrap.innerHTML = room.players.map(p=>`<div style="padding:6px;">👤 <b>${escapeHtml(p.nickname)}</b> ${p.role==='host'?'<span class="badge">host</span>':''}</div>`).join('');
+    const canKick = room.players.some(p=>p.nickname===App.nickname && (p.role==='host'||p.role==='creator'));
+    wrap.innerHTML = room.players.map(p=>`<div style="padding:6px; display:flex; align-items:center;">
+      <span style="flex:1;">👤 <b>${escapeHtml(p.nickname)}</b> ${p.role==='host'||p.role==='creator'?'<span class="badge">host</span>':''}</span>
+      ${canKick && p.nickname!==App.nickname ? `<button class="kick-btn" data-kick="${escapeHtml(p.nickname)}">remove</button>` : ''}
+    </div>`).join('');
   }
   const needed = room.hostMode==='3p' ? 3 : room.hostMode==='2v2' ? 4 : 2;
-  $('lobby-waiting').textContent = room.players.length < needed ? `Waiting for players to join… (${room.players.length}/${needed})` : 'Everyone is in — starting…';
+  const amHost = room.players.some(p=>p.nickname===App.nickname && (p.role==='host'||p.role==='creator'));
+  const full = room.players.length >= needed;
+  $('lobby-waiting').textContent = !full
+    ? `Waiting for players to join… (${room.players.length}/${needed})`
+    : (amHost ? 'Everyone is in — start when you\'re ready.' : 'Everyone is in — waiting for the host to start.');
+  $('btn-start-game').classList.toggle('hidden', !(amHost && full));
+  $('btn-start-game').onclick = ()=>{ sndClick(); onlineAction('start', {}); };
+
+  // the host gets a remove button beside everyone else
+  if(amHost){
+    $('lobby-players').querySelectorAll('[data-kick]').forEach(el=>{
+      el.onclick = ()=>{
+        const who = el.dataset.kick;
+        if(confirm(`Remove ${who} from the room?`)) onlineAction('kick', { target: who });
+      };
+    });
+  }
+  renderChat('lobby-chat', room);
 }
 function showJoinedToast(nick){
   const el = document.createElement('div');
@@ -2680,6 +2726,7 @@ function renderOnlineDraft(room){
       }))
     : bidders.map(p=>({nick:p.nickname, budget:p.budget, items:p.items}));
   renderStalls(displaySides, g.currentBidderIdx, g.mode==='contested'?g.turnIdx:null, room.theme.key);
+  renderChat('draft-chat', room);
 
   const amHost = room.players.find(p=>p.nickname===App.nickname && p.role==='host');
   $('host-watch-note').classList.toggle('hidden', !amHost);
@@ -2841,6 +2888,10 @@ async function onlineAction(type, payload){
     // between render and tap, or two writes raced. The server already retries
     // stale reads internally, so blocking the game on an alert here just spams
     // dialogs. Resync quietly and show a one-line status instead.
+    if(/removed you from this room/i.test(e.message)){
+      stopPolling(); App.roomCode=null; App.mode=null; forgetSession();
+      alert(e.message); showScreen('screen-home'); return;
+    }
     if(/has expired|no room with code/i.test(e.message)){
       stopPolling(); App.roomCode = null; App.mode = null; forgetSession();
       alert(e.message);
@@ -3337,6 +3388,51 @@ updateHomeForRematch();
     await joinRoom();
   };
 })();
+
+/* ---- Chat: same component in the lobby and mid-draft ---- */
+function chatMarkup(id){
+  return `<div class="chat-box">
+    <div class="chat-head" id="${id}-head"><span>💬 chat</span><span id="${id}-unread" class="hidden"></span></div>
+    <div class="chat-log" id="${id}-log"></div>
+    <div class="chat-row">
+      <input type="text" id="${id}-input" placeholder="Say something…" maxlength="140">
+      <button id="${id}-send">Send</button>
+    </div>
+  </div>`;
+}
+function mountChat(hostId){
+  const host = $(hostId);
+  if(host.dataset.mounted) return;
+  host.innerHTML = chatMarkup(hostId);
+  host.dataset.mounted = '1';
+  const send = ()=>{
+    const input = $(hostId+'-input');
+    const text = input.value.trim();
+    if(!text) return;
+    input.value = '';
+    onlineAction('chat', { text });
+  };
+  $(hostId+'-send').onclick = send;
+  $(hostId+'-input').onkeydown = (e)=>{ if(e.key==='Enter') send(); };
+  $(hostId+'-head').onclick = ()=>{
+    const log = $(hostId+'-log'), row = host.querySelector('.chat-row');
+    const hidden = log.classList.toggle('hidden');
+    if(row) row.classList.toggle('hidden', hidden);
+  };
+}
+function renderChat(hostId, room){
+  mountChat(hostId);
+  const log = $(hostId+'-log');
+  const msgs = room.chat || [];
+  // only redraw when something actually arrived, so typing isn't interrupted
+  if(log.dataset.count === String(msgs.length)) return;
+  log.dataset.count = String(msgs.length);
+  log.innerHTML = msgs.map(m => m.sys
+    ? `<div class="chat-msg sys">${escapeHtml(m.text)}</div>`
+    : `<div class="chat-msg${m.nick===App.nickname?' me':''}"><span class="who">${escapeHtml(m.nick)}</span>${escapeHtml(m.text)}</div>`
+  ).join('');
+  log.scrollTop = log.scrollHeight;
+}
 
 /* ---- Personal stats (local to this device) ---- */
 const STATS_KEY = 'dr4fter_stats';
