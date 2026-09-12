@@ -152,6 +152,34 @@ export class Room {
         return json(200, { room, options: room.game.awaitingHostPick ? hostPickOptions(room) : null });
       }
 
+      if (action === 'leave') {
+        const idx = room.players.findIndex(p => p.nickname === body.nickname);
+        if (idx < 0) return json(200, { room, left: true });   // already gone
+        // Mid-draft we keep the seat: the game is built around a fixed number
+        // of sides, and they can rejoin with the same nickname. Only a lobby
+        // departure actually frees the seat.
+        if (room.phase !== 'lobby') {
+          room.chat = room.chat || [];
+          room.chat.push({ sys: true, text: `${body.nickname} disconnected`, at: Date.now() });
+          await this.save(room);
+          return json(200, { room, left: true });
+        }
+        const was = room.players[idx];
+        room.players.splice(idx, 1);
+        // hand the room over rather than leaving it hostless
+        if ((was.role === 'creator' || was.role === 'host') && room.players.length) {
+          room.players[0].role = was.role;
+        }
+        if (room.hostMode === '2v2') {
+          const counts = [0, 0];
+          room.players.forEach(p => { p.team = counts[0] <= counts[1] ? 0 : 1; counts[p.team]++; });
+        }
+        room.chat = room.chat || [];
+        room.chat.push({ sys: true, text: `${body.nickname} left`, at: Date.now() });
+        await this.save(room);
+        return json(200, { room, left: true });
+      }
+
       if (action === 'kick') {
         const requester = room.players.find(p => p.nickname === body.nickname);
         if (!requester || (requester.role !== 'host' && requester.role !== 'creator')) {
