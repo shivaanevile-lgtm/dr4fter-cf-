@@ -148,6 +148,12 @@
     letter-spacing:.008em; text-transform:uppercase; color:var(--chalk);
     margin-bottom:var(--s3);
   }
+  .ovr-badge{
+    display:inline-block; font-family:var(--display); font-size:15px;
+    color:var(--deep); background:var(--gold); border-radius:5px;
+    padding:1px 7px 2px; margin-left:8px; vertical-align:2px;
+  }
+  .ovr-badge.unofficial{ background:var(--chalk-soft); color:var(--deep); }
   .lot-card .stars{ color:var(--gold); font-size:15px; letter-spacing:.08em; }
 
   /* ---- the money ---- */
@@ -601,7 +607,7 @@
     </div>
     <div id="debug-log-content">Type a command below.</div>
     <div class="debug-cmd-row">
-      <input type="text" id="debug-cmd-input" placeholder="finish · reveal · list · next 102">
+      <input type="text" id="debug-cmd-input" placeholder="reroll · rig · skip · reveal · list">
       <button id="btn-debug-run">Run</button>
     </div>
   </div>
@@ -1299,6 +1305,143 @@ function visualUrl(prompt, seed){
     + `?width=1024&height=640&nologo=true&model=flux&seed=${seed}`;
 }
 
+// ---- EA SPORTS FC 27 overall ratings ----
+// Confirmed OVRs from EA's official reveal (top-27 men, August 2026) plus
+// club reveals. Players not listed here keep their hand-set 1-10 rating,
+// because inventing an OVR and calling it official would be worse than
+// having none.
+const FC27_OVR = {
+  // Official EA SPORTS FC 27 overalls, taken from the published ratings database.
+  'Kylian Mbappé':91, 'Erling Haaland':91,
+  'Ousmane Dembélé':90, 'Rodri':90, 'Jude Bellingham':90, 'Vitinha':90,
+  'Pedri':90, 'Harry Kane':90, 'Thibaut Courtois':90,
+  'Gianluigi Donnarumma':89, 'Vinícius Júnior':89, 'Gabriel Magalhães':89,
+  'Khvicha Kvaratskhelia':89, 'Bruno Fernandes':89, 'Nuno Mendes':89, 'Lionel Messi':89,
+  'Virgil van Dijk':88, 'Achraf Hakimi':88, 'Joshua Kimmich':88, 'Jan Oblak':88,
+  'Declan Rice':88, 'William Saliba':88,
+  'Mohamed Salah':87, 'Alisson Becker':87, 'Federico Valverde':87, 'Lautaro Martínez':87,
+  'Jamal Musiala':87, 'Bukayo Saka':87, 'Marquinhos':87, 'Mike Maignan':87,
+  'David Raya':87, 'Nicolò Barella':87, 'Rúben Dias':87, 'Dayot Upamecano':87,
+  'Florian Wirtz':86, 'Alexander Isak':86, 'Alessandro Bastoni':86, 'Frenkie de Jong':86,
+  'Moisés Caicedo':86, 'Yann Sommer':86, 'Jules Koundé':86, 'Julian Álvarez':86,
+  'Martin Ødegaard':86, 'Victor Osimhen':86, 'Federico Dimarco':86,
+  'Dominik Szoboszlai':86, 'Enzo Fernández':86, 'Fabián Ruiz':86,
+  'Serhou Guirassy':85, 'Kevin De Bruyne':85, 'Alexis Mac Allister':85,
+  'Trent Alexander-Arnold':85, 'Hakan Çalhanoğlu':85, 'Sandro Tonali':85,
+  'Emiliano Martínez':85, 'Marcus Thuram':85, 'Phil Foden':85, 'Josko Gvardiol':85
+};
+
+// Official EA Ultimate Team ICON and HERO ratings (FC 26 card database).
+// These ARE real EA cards, so they belong with the official numbers, not with
+// my own — an earlier version of this file wrongly treated them as estimates.
+const ICON_OVR = {
+  'Pelé':95, 'Diego Maradona':95,
+  'Ronaldo Nazário':94, 'Zinedine Zidane':94,
+  'Ronaldinho':93,
+  'Paolo Maldini':92, 'Andrés Iniesta':92,
+  'Thierry Henry':91, 'Zlatan Ibrahimović':91, 'Marcelo':91,
+  'Andriy Shevchenko':88, 'Patrick Vieira':88, 'Michel Salgado':88,
+  'Claude Makélélé':87, 'Robert Pirès':87, 'Ian Wright':87,
+  'Ashley Cole':86, 'Roy Keane':86, 'Gennaro Gattuso':86, 'Michael Essien':86
+};
+
+// Legends WITHOUT an EA Icon or Hero card — mostly one-club greats. No official
+// number exists for these, so they're my ratings on the same 0-99 scale.
+const LEGEND_OVR = {
+  // goalkeepers
+  'Gianluigi Buffon':92, 'Iker Casillas':91, 'Manuel Neuer':91, 'Oliver Kahn':91,
+  'Dino Zoff':91, 'Peter Schmeichel':91, 'Petr Čech':89, 'Edwin van der Sar':89,
+  'Julio César':87, 'José Luis Chilavert':87, 'David de Gea':86, 'Víctor Valdés':85,
+  'Walter Zenga':85, 'Jens Lehmann':85, 'Hugo Lloris':85, 'David Seaman':85,
+  'Santiago Cañizares':84, 'Claudio Bravo':83, 'Joe Hart':82,
+  // defenders
+  'Franco Baresi':92, 'Roberto Carlos':92, 'Cafu':91,
+  'Alessandro Nesta':90, 'Sergio Ramos':90, 'Fabio Cannavaro':90, 'Philipp Lahm':90,
+  'Javier Zanetti':89, 'Carles Puyol':88, 'Dani Alves':88, 'Rio Ferdinand':88,
+  'Nemanja Vidić':87, 'Fernando Hierro':87, 'Vincent Kompany':87,
+  'Gerard Piqué':86, 'John Terry':86, 'Pepe':85, 'Tony Adams':85,
+  'Éric Abidal':84, 'Ledley King':84, 'Gary Neville':83, 'Pablo Zabaleta':83,
+  'Marco Materazzi':83, 'Denis Irwin':82, 'Branislav Ivanović':82,
+  'Lauren':80, 'Kyle Naughton':72,
+  // midfielders
+  'Xavi Hernández':92, 'Andrea Pirlo':91, 'Kaká':91, 'Rivaldo':91,
+  'Steven Gerrard':90, 'Ryan Giggs':89, 'David Silva':89, 'Frank Lampard':89,
+  'Eden Hazard':89, 'Clarence Seedorf':88, 'Yaya Touré':88, 'Paul Scholes':88,
+  'Wesley Sneijder':87, 'Sergio Busquets':87, 'Michael Ballack':87, 'Deco':86,
+  'Esteban Cambiasso':85, 'Cesc Fàbregas':85, 'Luka Modrić':85, 'Luka Modric':85,
+  'Christian Eriksen':84, 'Paul Pogba':84, 'Rafael van der Vaart':83,
+  'Mousa Dembélé':83, 'Guti':82, 'Henrikh Mkhitaryan':80,
+  'Casemiro':84, 'İlkay Gündoğan':84, 'Marco Verratti':85,
+  // attackers
+  'Marco van Basten':93, 'Cristiano Ronaldo':93, 'Alfredo Di Stéfano':93,
+  'Dennis Bergkamp':91, 'Sergio Agüero':90, 'Raúl':90, 'Neymar':89,
+  'Karim Benzema':89, 'Wayne Rooney':89, 'Eric Cantona':89, 'Didier Drogba':89,
+  'Ruud van Nistelrooy':89, 'Alan Shearer':89, 'Samuel Eto\'o':88, 'Luis Suárez':88,
+  'Gareth Bale':88, 'Jürgen Klinsmann':88, 'Filippo Inzaghi':86, 'Gianfranco Zola':86,
+  'Carlos Tevez':85, 'Diego Milito':85, 'Andy Cole':84
+};
+
+// Modern players outside EA's published FC 27 top 100 — these use their
+// EA SPORTS FC 26 overalls instead. Ticked ones were confirmed against
+// published FC 26 rating lists; the rest come from the FC 26 database as I
+// know it, so treat them as a season behind rather than as FC 27 numbers.
+const FC26_OVR = {
+  // goalkeepers
+  'Ederson':85, 'Marc-André ter Stegen':89, 'Diogo Costa':85, 'Yassine Bounou':84,
+  'Bernd Leno':82, 'André Onana':82, 'Nick Pope':81, 'Robert Sánchez':80,
+  // defenders
+  'Antonio Rüdiger':87, 'Cristian Romero':85, 'Ronald Araújo':85,
+  'Alphonso Davies':84, 'Theo Hernández':84, 'Éder Militão':84,
+  'Kim Min-jae':84, 'Manuel Akanji':84,
+  'John Stones':83, 'Ben White':83, 'Lisandro Martínez':83, 'Milan Škriniar':83,
+  'Nathan Aké':83, 'Reece James':83,
+  'Kyle Walker':82, 'Raphaël Varane':82, 'Pau Torres':82,
+  // midfielders
+  'Aurélien Tchouaméni':84, 'Eduardo Camavinga':83, 'Gavi':83,
+  'Leon Goretzka':83, 'Ismaël Bennacer':81,
+  // attackers
+  'Rafael Leão':84, 'Cody Gakpo':84, 'Ollie Watkins':84, 'Kingsley Coman':84,
+  'Randal Kolo Muani':82, 'Marcus Rashford':82, 'Darwin Núñez':82,
+  'Gabriel Jesus':82, 'Dušan Vlahović':82,
+  'Nicolas Jackson':81, 'Federico Chiesa':80
+};
+
+// One lookup across all three banks: FC 27 official, then icons, then FC 26.
+function ovrOf(name){ return FC27_OVR[name] || ICON_OVR[name] || FC26_OVR[name] || LEGEND_OVR[name] || null; }
+// Official = an actual EA card (FC 27 base, FC 26 base, or an Icon/Hero).
+function isOfficialOvr(name){ return !!(FC27_OVR[name] || ICON_OVR[name] || FC26_OVR[name]); }
+// The scale you gave, with the two gaps filled in the obvious places
+// (86-87 sits between 6.5 and 8; 90-91 between 9 and 10).
+function ovrToRating(ovr){
+  if(ovr >= 91) return 10;
+  if(ovr >= 90) return 9.5;
+  if(ovr >= 88) return 9;
+  if(ovr >= 87) return 8;
+  if(ovr >= 86) return 7;
+  if(ovr >= 85) return 6.5;
+  if(ovr >= 82) return 6;
+  if(ovr >= 80) return 5.5;
+  return 5;
+}
+function ovrFor(name){ return ovrOf(name); }
+// Rewrite football ratings from the real card where we have one.
+(function applyFC27(){
+  const keys = ['football'].concat(Object.keys(RIVALRIES || {}));
+  keys.forEach(k=>{
+    const ct = CATEGORY_THEMES[k];
+    if(!ct) return;
+    ct.cats.forEach(cat=>{
+      [ct.pool[cat], ct.icons && ct.icons[cat]].forEach(list=>{
+        if(!list) return;
+        list.forEach(entry=>{
+          const ovr = ovrOf(entry[0]);
+          if(ovr) entry[1] = ovrToRating(ovr);
+        });
+      });
+    });
+  });
+})();
+
 /* Stable numeric IDs. Assigned once in a fixed traversal order so the client
    and the server always agree on which number means which item. */
 const ITEM_BY_ID = {};
@@ -1357,6 +1500,15 @@ function playTone(freq, dur, type, gainStart){
 function sndGavel(){ const ctx=audioCtx(); if(!ctx) return; playTone(90,0.28,'square',0.25); setTimeout(()=>playTone(70,0.2,'square',0.18),90); }
 function sndCoin(){ playTone(880,0.09,'triangle',0.18); setTimeout(()=>playTone(1320,0.12,'triangle',0.18),80); setTimeout(()=>playTone(1760,0.16,'triangle',0.15),160); }
 function sndClick(){ playTone(440,0.05,'sine',0.08); }
+
+/* ---- haptics: a short buzz when you get outbid, a double tap when you win.
+   navigator.vibrate is Android/Chrome only and silently absent on iOS, so
+   every call is guarded rather than assumed. ---- */
+function buzz(pattern){
+  try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){}
+}
+function buzzOutbid(){ buzz(70); }
+function buzzWon(){ buzz([25,45,25]); }
 
 /* ============ CONFETTI (DOM/CSS, no library) ============ */
 function confettiBurst(){
@@ -1921,6 +2073,12 @@ function startSoloLot(P, playerIdx){
 }
 
 function resolveLotWinner(P, winnerIdx, amount){
+  // `rig` overrides the auction outcome for one lot, then clears itself.
+  if(P.rigged && (!P.rigged.name || P.rigged.name === P.currentLot.name)){
+    winnerIdx = P.rigged.side;
+    amount = Math.min(amount, P.players[winnerIdx].budget);
+    P.rigged = null;
+  }
   const player = P.players[winnerIdx];
   player.budget -= amount;
   const lotName = P.currentLot.name;
@@ -1944,6 +2102,7 @@ function resolveLotWinner(P, winnerIdx, amount){
 // Slam a SOLD stamp over the lot card. Colour matches the toast: green for a
 // free claim, gold for a bargain, stamp-red otherwise.
 function playSoldStamp(amount){
+  buzzWon();
   const card = $('lot-card');
   if(!card) return;
   const old = card.querySelector ? card.querySelector('.sold-stamp') : null;
@@ -2162,6 +2321,15 @@ async function fetchAiPref(key){
   }catch(e){ aiPrefsCache[key] = null; return null; }
 }
 async function aiTakeTurn(){
+  {
+    const Pf = App.practice;
+    if(Pf && Pf.forcedPass === 1){
+      Pf.forcedPass = null;
+      Pf.tickerLog.push(`${Pf.players[1].nick}: forced pass`);
+      aiPass();
+      return;
+    }
+  }
   const P = App.practice;
   if(!P || P.mode!=='contested' || P.turn!==1) return;
   const ai = P.players[1];
@@ -2178,7 +2346,7 @@ async function aiTakeTurn(){
     const ceilingX = extremeCeiling(P, ai, opp);
     const bidX = P.currentBid + 1;
     if(bidX > ceilingX || bidX > ai.budget){ aiPass(); return; }
-    P.currentBid = bidX; P.currentBidder = 1;
+    P.currentBid = bidX; P.currentBidder = 1; buzzOutbid();
     P.tickerLog.push(`${P.players[1].nick}: $${bidX}`);
     P.turn = 0;
     renderPracticeDraft();
@@ -2226,7 +2394,7 @@ async function aiTakeTurn(){
   if(amount<=cur) amount = Math.min(ai.budget, cur+1);
   if(amount>ai.budget || amount<=cur || amount>ceiling){ aiPass(); return; }
 
-  P.currentBid = amount; P.currentBidder = 1;
+  P.currentBid = amount; P.currentBidder = 1; buzzOutbid();
   P.tickerLog.push(`AI: $${amount}`);
   P.turn = 0;
   renderPracticeDraft();
@@ -2256,7 +2424,9 @@ function renderPracticeDraft(){
 
   $('lot-cat').textContent = P.currentLot.cat ? roleLabel(P.catThemeKey, P.currentLot.cat) : P.themeEmoji+' '+P.themeName;
   $('lot-name').textContent = P.currentLot.name;
-  $('lot-stars').textContent = stars(P.currentLot.r);
+  const ovrP = ovrFor(P.currentLot.name);
+  $('lot-stars').innerHTML = stars(P.currentLot.r) +
+    (ovrP ? ` <span class="ovr-badge${isOfficialOvr(P.currentLot.name)?'':' unofficial'}">${ovrP}</span>` : '');
   setLotNumber(P.currentLot, App.themeKey);
 
   $('bid-display').innerHTML = '$'+P.currentBid + (P.currentBidder!==null ? `<span class="by">— currently held by ${escapeHtml(P.players[P.currentBidder].nick)}</span>` : '');
@@ -2493,6 +2663,16 @@ function renderOnlineDraft(room){
     }
   }
 
+  // someone just took the lead away from us
+  const holder = g.currentBidderIdx;
+  const mineNow = mySideIndexClient(room);
+  if(g.mode==='contested' && holder!==null && holder!==undefined && holder!==mineNow
+     && App.lastBidHolder === mineNow && App.lastBidLot === g.currentLot.name){
+    buzzOutbid();
+  }
+  App.lastBidHolder = holder;
+  App.lastBidLot = g.currentLot ? g.currentLot.name : null;
+
   const displaySides = room.hostMode==='2v2'
     ? room.teams.map((t,i)=>({
         nick: `${i===0?'Team A':'Team B'} (${room.players.filter(p=>p.team===i).map(p=>p.nickname).join(' & ')})`,
@@ -2543,7 +2723,9 @@ function renderOnlineDraft(room){
   $('draft-active-area').classList.remove('hidden');
   $('lot-cat').textContent = g.currentLot.cat ? roleLabel(room.theme.key, g.currentLot.cat) : (room.theme.emoji||'🎯')+' '+room.theme.name;
   $('lot-name').textContent = g.currentLot.name;
-  $('lot-stars').textContent = stars(g.currentLot.r);
+  const ovrG = ovrFor(g.currentLot.name);
+  $('lot-stars').innerHTML = stars(g.currentLot.r) +
+    (ovrG ? ` <span class="ovr-badge${isOfficialOvr(g.currentLot.name)?'':' unofficial'}">${ovrG}</span>` : '');
   setLotNumber(g.currentLot, room.theme.key);
   $('bid-display').innerHTML = '$'+g.currentBid + (g.currentBidderIdx!==null && g.currentBidderIdx!==undefined ? `<span class="by">— currently held by ${escapeHtml(sideLabelClient(room, g.currentBidderIdx))}</span>` : '');
   $('ticker').textContent = (g.tickerLog&&g.tickerLog.length) ? g.tickerLog.join(' → ') : 'New lot — place your bid';
@@ -3352,7 +3534,7 @@ function runDebugCommand(raw){
   if(cmd==='list' || cmd==='items'){ listCurrentCategory(); return; }
   if(cmd==='reveal'){ revealUpcoming(); return; }
   if(cmd==='help'){
-    debugLog('reveal · list · finish · next <id> · steal <id> · give <id> [nickname] · swap <id1> <id2> · swapall · money <amt> [nickname] · state');
+    debugLog('reveal · list · reroll · rig [id] · skip [nick] · finish · next <id> · steal <id> · give <id> [nick] · swap <id1> <id2> · swapall · money <amt> · state');
     return;
   }
   if(App.mode==='practice') runDebugCommandPractice(cmd, rest);
@@ -3465,6 +3647,48 @@ function runDebugCommandPractice(cmd, rest){
     debugLog(filled ? `Skipped to the end — auto-filled ${filled} remaining slot${filled===1?'':'s'} for free.`
                     : 'Skipped to the end — every slot was already filled.');
     finishPractice();
+  } else if(cmd==='reroll'){
+    if(!P.currentLot){ debugLog('No active lot to reroll.'); return; }
+    const was = P.currentLot.name;
+    const cat = P.currentLot.cat;
+    const passedOver = P.currentLot;
+    let now = null;
+    if(P.catThemeKey){
+      const cand = P.candidates.shift();
+      if(cand){ P.candidates.push([passedOver.name, passedOver.r]); now = P.currentLot = {name:cand[0], r:cand[1], cat}; }
+    } else {
+      const cand = P.itemPool.shift();
+      if(cand){ P.itemPool.push([passedOver.name, passedOver.r]); now = P.currentLot = {name:cand[0], r:cand[1], cat:null}; }
+    }
+    if(!now){ debugLog(`Nothing left to swap "${was}" for.`); return; }
+    P.currentBid = 0; P.currentBidder = null; P.passStreak = 0; P.tickerLog = [];
+    debugLog(P.catThemeKey ? `Rerolled ${cat}: "${was}" → "${now.name}" (${now.r}/10)`
+                           : `Rerolled: "${was}" → "${now.name}" (${now.r}/10)`);
+    renderPracticeDraft();
+  } else if(cmd==='skip'){
+    if(!P.currentLot){ debugLog('The draft has finished.'); return; }
+    P.forcedPass = 1;
+    debugLog(`${P.players[1].nick} must pass their next turn.`);
+  } else if(cmd==='rig'){
+    if(!P.currentLot){ debugLog('No active lot to rig.'); return; }
+    let target = null;
+    if(rest){
+      const res = resolveTokenPractice(P, rest);
+      if(res.error){ debugLog(res.error); return; }
+      if(findHolderPractice(P, res.rec.name)){ debugLog(`"${res.rec.name}" is already drafted.`); return; }
+      target = res.rec;
+      P.pendingNext = P.pendingNext || {};
+      const key = target.cat || '_';
+      P.pendingNext[key] = P.pendingNext[key] || [];
+      if(!P.pendingNext[key].some(e=>e[0]===target.name)){
+        P.pendingNext[key].push([target.name, target.r]);
+        const strip = arr => { if(!arr) return; const i=arr.findIndex(e=>e[0]===target.name); if(i>-1) arr.splice(i,1); };
+        strip(P.candidates); strip(P.itemPool);
+      }
+    }
+    P.rigged = { side:0, name: target ? target.name : P.currentLot.name };
+    debugLog(target ? `Rigged: #${target.id} ${target.name} comes up next and is yours whatever happens.`
+                    : `Rigged: "${P.currentLot.name}" is yours whatever happens.`);
   } else if(cmd==='swapall'){
     const tmp = P.players[0].items;
     P.players[0].items = P.players[1].items;
@@ -3576,7 +3800,7 @@ function runDebugCommandPractice(cmd, rest){
   }
 }
 async function runDebugCommandOnline(cmd, rest){
-  if(!['money','money+','next','steal','swap','swapall','give','finish','end','state'].includes(cmd)){ debugLog(`Unknown command "${cmd}". Type "help".`); return; }
+  if(!['money','money+','next','steal','swap','swapall','give','finish','end','rig','skip','reroll','state'].includes(cmd)){ debugLog(`Unknown command "${cmd}". Type "help".`); return; }
   if(cmd==='state'){
     try{ const data = await api('state', {}); debugLog(JSON.stringify(data.room)); }
     catch(e){ debugLog(`state failed: ${e.message}`); }
