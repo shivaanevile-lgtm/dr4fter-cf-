@@ -511,7 +511,7 @@ const CLUB_KITS = {
 };
 function kitFor(name){
   const club = clubOf(name);
-  return (club && CLUB_KITS[club]) || ['#F5EFE3','#2B2620',false];
+  return (club && CLUB_KITS[club]) || ['#F2F0E9','#0B1C36',false];
 }
 
 // Rivalry drafts: same engine as the 5-a-side draft, but the pool is limited
@@ -598,6 +598,214 @@ function checkText(raw, label){
   return null;
 }
 
+// How approachable each theme is. 'easy' = anyone can play, 'deep' = rewards
+// knowing the subject. Shown as a badge on the theme chips.
+const THEME_LEVEL = {
+  backyard:'easy', gaming:'easy', vacation:'easy', perfectlife:'easy', fruit:'easy',
+  bunker:'medium', superhero:'medium', videogames:'medium',
+  movies:'deep', tvshows:'deep', music:'deep',
+  sandwich:'easy', pizza:'easy', island:'easy',
+  movie:'medium',
+  football:'deep',
+  rivals_clasico:'deep', rivals_manchester:'deep', rivals_milan:'deep', rivals_london:'deep'
+};
+const LEVEL_LABEL = { easy:'easy', medium:'some knowledge', deep:'deep cut' };
+function themeLevel(key){ return THEME_LEVEL[key] || 'medium'; }
+
+// Themes that describe a physical thing you could photograph. Abstract ones
+// (film credits, football squads, superpowers) generate nonsense, so they
+// don't get the button at all.
+const VISUALISABLE = {
+  backyard: { subject:'a backyard', style:'wide photo of a landscaped backyard, golden hour, realistic' },
+  gaming:   { subject:'a gaming room', style:'wide photo of a gaming setup room interior, LED lighting, realistic' },
+  bunker:   { subject:'an underground bunker', style:'wide photo of an underground survival bunker interior, realistic' },
+  island:   { subject:'a private island', style:'aerial photo of a small private island, tropical, realistic' },
+  pizza:    { subject:'a pizza', style:'overhead food photo of a whole pizza on a wooden board, realistic' },
+  sandwich: { subject:'a sandwich', style:'close-up food photo of a stacked sandwich cut in half, realistic' }
+};
+function canVisualise(themeKey){ return !!VISUALISABLE[themeKey]; }
+// Builds the text prompt from the items someone actually drafted.
+function buildVisualPrompt(themeKey, items){
+  const v = VISUALISABLE[themeKey];
+  if(!v) return null;
+  // Image models latch onto the first concrete noun and drop the rest, so put
+  // the drafted items FIRST and number them — the style direction goes last,
+  // where it can't crowd them out.
+  const names = items
+    .map(it => simplifyForPrompt(it.name))
+    .filter(Boolean);
+  const list = names.map((n,i)=>`(${i+1}) ${n}`).join(', ');
+  return `${v.subject} containing all ${names.length} of these, each clearly visible: ${list}. `
+       + `Every one of the ${names.length} must appear in the scene. ${v.style}. No text, no words, no letters, no signage.`;
+}
+// Trim the wording down to the thing itself. Long descriptive names dilute the
+// prompt and the model starts ignoring later items.
+function simplifyForPrompt(name){
+  return String(name)
+    .replace(/^(a|an|the)\s+/i,'')
+    .replace(/\s*\(.*?\)\s*/g,' ')
+    .replace(/,.*$/,'')                      // drop trailing clauses
+    .replace(/\b(that|which|you can)\b.*$/i,'')
+    .trim();
+}
+// Primary: our own Worker, running Cloudflare's flux model. Better at
+// multi-object prompts and not dependent on anyone else's free service.
+async function generateVisual(prompt){
+  const res = await fetch('/api/image', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ prompt })
+  });
+  if(!res.ok){
+    let msg = 'Image generation failed';
+    try{ const j = await res.json(); if(j.error) msg = j.error; }catch(e){}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  return URL.createObjectURL(blob);
+}
+// Fallback if the Worker route isn't available (e.g. the older deployment).
+function visualUrl(prompt, seed){
+  return 'https://image.pollinations.ai/prompt/' + encodeURIComponent(prompt)
+    + `?width=1024&height=640&nologo=true&model=flux&seed=${seed}`;
+}
+
+// ---- EA SPORTS FC 27 overall ratings ----
+// Confirmed OVRs from EA's official reveal (top-27 men, August 2026) plus
+// club reveals. Players not listed here keep their hand-set 1-10 rating,
+// because inventing an OVR and calling it official would be worse than
+// having none.
+const FC27_OVR = {
+  // Official EA SPORTS FC 27 overalls, taken from the published ratings database.
+  'Kylian Mbappé':91, 'Erling Haaland':91,
+  'Ousmane Dembélé':90, 'Rodri':90, 'Jude Bellingham':90, 'Vitinha':90,
+  'Pedri':90, 'Harry Kane':90, 'Thibaut Courtois':90,
+  'Gianluigi Donnarumma':89, 'Vinícius Júnior':89, 'Gabriel Magalhães':89,
+  'Khvicha Kvaratskhelia':89, 'Bruno Fernandes':89, 'Nuno Mendes':89, 'Lionel Messi':89,
+  'Virgil van Dijk':88, 'Achraf Hakimi':88, 'Joshua Kimmich':88, 'Jan Oblak':88,
+  'Declan Rice':88, 'William Saliba':88,
+  'Mohamed Salah':87, 'Alisson Becker':87, 'Federico Valverde':87, 'Lautaro Martínez':87,
+  'Jamal Musiala':87, 'Bukayo Saka':87, 'Marquinhos':87, 'Mike Maignan':87,
+  'David Raya':87, 'Nicolò Barella':87, 'Rúben Dias':87, 'Dayot Upamecano':87,
+  'Florian Wirtz':86, 'Alexander Isak':86, 'Alessandro Bastoni':86, 'Frenkie de Jong':86,
+  'Moisés Caicedo':86, 'Yann Sommer':86, 'Jules Koundé':86, 'Julian Álvarez':86,
+  'Martin Ødegaard':86, 'Victor Osimhen':86, 'Federico Dimarco':86,
+  'Dominik Szoboszlai':86, 'Enzo Fernández':86, 'Fabián Ruiz':86,
+  'Serhou Guirassy':85, 'Kevin De Bruyne':85, 'Alexis Mac Allister':85,
+  'Trent Alexander-Arnold':85, 'Hakan Çalhanoğlu':85, 'Sandro Tonali':85,
+  'Emiliano Martínez':85, 'Marcus Thuram':85, 'Phil Foden':85, 'Josko Gvardiol':85
+};
+
+// Official EA Ultimate Team ICON and HERO ratings (FC 26 card database).
+// These ARE real EA cards, so they belong with the official numbers, not with
+// my own — an earlier version of this file wrongly treated them as estimates.
+const ICON_OVR = {
+  'Pelé':95, 'Diego Maradona':95,
+  'Ronaldo Nazário':94, 'Zinedine Zidane':94,
+  'Ronaldinho':93,
+  'Paolo Maldini':92, 'Andrés Iniesta':92,
+  'Thierry Henry':91, 'Zlatan Ibrahimović':91, 'Marcelo':91,
+  'Andriy Shevchenko':88, 'Patrick Vieira':88, 'Michel Salgado':88,
+  'Claude Makélélé':87, 'Robert Pirès':87, 'Ian Wright':87,
+  'Ashley Cole':86, 'Roy Keane':86, 'Gennaro Gattuso':86, 'Michael Essien':86
+};
+
+// Legends WITHOUT an EA Icon or Hero card — mostly one-club greats. No official
+// number exists for these, so they're my ratings on the same 0-99 scale.
+const LEGEND_OVR = {
+  // goalkeepers
+  'Gianluigi Buffon':92, 'Iker Casillas':91, 'Manuel Neuer':91, 'Oliver Kahn':91,
+  'Dino Zoff':91, 'Peter Schmeichel':91, 'Petr Čech':89, 'Edwin van der Sar':89,
+  'Julio César':87, 'José Luis Chilavert':87, 'David de Gea':86, 'Víctor Valdés':85,
+  'Walter Zenga':85, 'Jens Lehmann':85, 'Hugo Lloris':85, 'David Seaman':85,
+  'Santiago Cañizares':84, 'Claudio Bravo':83, 'Joe Hart':82,
+  // defenders
+  'Franco Baresi':92, 'Roberto Carlos':92, 'Cafu':91,
+  'Alessandro Nesta':90, 'Sergio Ramos':90, 'Fabio Cannavaro':90, 'Philipp Lahm':90,
+  'Javier Zanetti':89, 'Carles Puyol':88, 'Dani Alves':88, 'Rio Ferdinand':88,
+  'Nemanja Vidić':87, 'Fernando Hierro':87, 'Vincent Kompany':87,
+  'Gerard Piqué':86, 'John Terry':86, 'Pepe':85, 'Tony Adams':85,
+  'Éric Abidal':84, 'Ledley King':84, 'Gary Neville':83, 'Pablo Zabaleta':83,
+  'Marco Materazzi':83, 'Denis Irwin':82, 'Branislav Ivanović':82,
+  'Lauren':80, 'Kyle Naughton':72,
+  // midfielders
+  'Xavi Hernández':92, 'Andrea Pirlo':91, 'Kaká':91, 'Rivaldo':91,
+  'Steven Gerrard':90, 'Ryan Giggs':89, 'David Silva':89, 'Frank Lampard':89,
+  'Eden Hazard':89, 'Clarence Seedorf':88, 'Yaya Touré':88, 'Paul Scholes':88,
+  'Wesley Sneijder':87, 'Sergio Busquets':87, 'Michael Ballack':87, 'Deco':86,
+  'Esteban Cambiasso':85, 'Cesc Fàbregas':85, 'Luka Modrić':85, 'Luka Modric':85,
+  'Christian Eriksen':84, 'Paul Pogba':84, 'Rafael van der Vaart':83,
+  'Mousa Dembélé':83, 'Guti':82, 'Henrikh Mkhitaryan':80,
+  'Casemiro':84, 'İlkay Gündoğan':84, 'Marco Verratti':85,
+  // attackers
+  'Marco van Basten':93, 'Cristiano Ronaldo':93, 'Alfredo Di Stéfano':93,
+  'Dennis Bergkamp':91, 'Sergio Agüero':90, 'Raúl':90, 'Neymar':89,
+  'Karim Benzema':89, 'Wayne Rooney':89, 'Eric Cantona':89, 'Didier Drogba':89,
+  'Ruud van Nistelrooy':89, 'Alan Shearer':89, 'Samuel Eto\'o':88, 'Luis Suárez':88,
+  'Gareth Bale':88, 'Jürgen Klinsmann':88, 'Filippo Inzaghi':86, 'Gianfranco Zola':86,
+  'Carlos Tevez':85, 'Diego Milito':85, 'Andy Cole':84
+};
+
+// Modern players outside EA's published FC 27 top 100 — these use their
+// EA SPORTS FC 26 overalls instead. Ticked ones were confirmed against
+// published FC 26 rating lists; the rest come from the FC 26 database as I
+// know it, so treat them as a season behind rather than as FC 27 numbers.
+const FC26_OVR = {
+  // goalkeepers
+  'Ederson':85, 'Marc-André ter Stegen':89, 'Diogo Costa':85, 'Yassine Bounou':84,
+  'Bernd Leno':82, 'André Onana':82, 'Nick Pope':81, 'Robert Sánchez':80,
+  // defenders
+  'Antonio Rüdiger':87, 'Cristian Romero':85, 'Ronald Araújo':85,
+  'Alphonso Davies':84, 'Theo Hernández':84, 'Éder Militão':84,
+  'Kim Min-jae':84, 'Manuel Akanji':84,
+  'John Stones':83, 'Ben White':83, 'Lisandro Martínez':83, 'Milan Škriniar':83,
+  'Nathan Aké':83, 'Reece James':83,
+  'Kyle Walker':82, 'Raphaël Varane':82, 'Pau Torres':82,
+  // midfielders
+  'Aurélien Tchouaméni':84, 'Eduardo Camavinga':83, 'Gavi':83,
+  'Leon Goretzka':83, 'Ismaël Bennacer':81,
+  // attackers
+  'Rafael Leão':84, 'Cody Gakpo':84, 'Ollie Watkins':84, 'Kingsley Coman':84,
+  'Randal Kolo Muani':82, 'Marcus Rashford':82, 'Darwin Núñez':82,
+  'Gabriel Jesus':82, 'Dušan Vlahović':82,
+  'Nicolas Jackson':81, 'Federico Chiesa':80
+};
+
+// One lookup across all three banks: FC 27 official, then icons, then FC 26.
+function ovrOf(name){ return FC27_OVR[name] || ICON_OVR[name] || FC26_OVR[name] || LEGEND_OVR[name] || null; }
+// Official = an actual EA card (FC 27 base, FC 26 base, or an Icon/Hero).
+function isOfficialOvr(name){ return !!(FC27_OVR[name] || ICON_OVR[name] || FC26_OVR[name]); }
+// The scale you gave, with the two gaps filled in the obvious places
+// (86-87 sits between 6.5 and 8; 90-91 between 9 and 10).
+function ovrToRating(ovr){
+  if(ovr >= 91) return 10;
+  if(ovr >= 90) return 9.5;
+  if(ovr >= 88) return 9;
+  if(ovr >= 87) return 8;
+  if(ovr >= 86) return 7;
+  if(ovr >= 85) return 6.5;
+  if(ovr >= 82) return 6;
+  if(ovr >= 80) return 5.5;
+  return 5;
+}
+function ovrFor(name){ return ovrOf(name); }
+// Rewrite football ratings from the real card where we have one.
+(function applyFC27(){
+  const keys = ['football'].concat(Object.keys(RIVALRIES || {}));
+  keys.forEach(k=>{
+    const ct = CATEGORY_THEMES[k];
+    if(!ct) return;
+    ct.cats.forEach(cat=>{
+      [ct.pool[cat], ct.icons && ct.icons[cat]].forEach(list=>{
+        if(!list) return;
+        list.forEach(entry=>{
+          const ovr = ovrOf(entry[0]);
+          if(ovr) entry[1] = ovrToRating(ovr);
+        });
+      });
+    });
+  });
+})();
+
 /* Stable numeric IDs. Assigned once in a fixed traversal order so the client
    and the server always agree on which number means which item. */
 const ITEM_BY_ID = {};
@@ -625,4 +833,4 @@ function nationOf(name){ const m = footballMeta(name); return m ? m[1] : null; }
 function itemById(id){ return ITEM_BY_ID[parseInt(id,10)]; }
 /* END GAME DATA */
 
-export { THEMES, FOOTBALL, FOOTBALL_META, FOOTBALL_LEGENDS, FOOTBALL_LEGEND_META, CLUB_KITS, kitFor, FOOTBALL_CATS, FOOTBALL_REQUIRED, SANDWICH, SANDWICH_CATS, SANDWICH_REQUIRED, MOVIE, MOVIE_CATS, MOVIE_REQUIRED, PIZZA, PIZZA_CATS, PIZZA_REQUIRED, ISLAND, ISLAND_CATS, ISLAND_REQUIRED, RIVALRIES, CATEGORY_THEMES, ITEM_BY_ID, ID_BY_NAME, itemIdFor, itemById, clubOf, nationOf, checkText };
+export { THEMES, FOOTBALL, FOOTBALL_META, FOOTBALL_LEGENDS, FOOTBALL_LEGEND_META, CLUB_KITS, kitFor, FOOTBALL_CATS, FOOTBALL_REQUIRED, SANDWICH, SANDWICH_CATS, SANDWICH_REQUIRED, MOVIE, MOVIE_CATS, MOVIE_REQUIRED, PIZZA, PIZZA_CATS, PIZZA_REQUIRED, ISLAND, ISLAND_CATS, ISLAND_REQUIRED, RIVALRIES, FC27_OVR, ICON_OVR, LEGEND_OVR, FC26_OVR, ovrOf, ovrToRating, ovrFor, isOfficialOvr, CATEGORY_THEMES, ITEM_BY_ID, ID_BY_NAME, itemIdFor, itemById, clubOf, nationOf, checkText };
