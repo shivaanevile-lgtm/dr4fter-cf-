@@ -585,6 +585,7 @@
 
     <div class="section-label">players</div>
     <div class="stall-row" id="stall-row"></div>
+    <div id="draft-chat"></div>
   </div>
 
   <!-- RESULTS SCREEN -->
@@ -3402,7 +3403,8 @@ function chatMarkup(id){
 }
 function mountChat(hostId){
   const host = $(hostId);
-  if(host.dataset.mounted) return;
+  if(!host) return false;          // container not on this screen — nothing to do
+  if(host.dataset.mounted) return true;
   host.innerHTML = chatMarkup(hostId);
   host.dataset.mounted = '1';
   const send = ()=>{
@@ -3419,10 +3421,12 @@ function mountChat(hostId){
     const hidden = log.classList.toggle('hidden');
     if(row) row.classList.toggle('hidden', hidden);
   };
+  return true;
 }
 function renderChat(hostId, room){
-  mountChat(hostId);
+  if(!mountChat(hostId)) return;
   const log = $(hostId+'-log');
+  if(!log) return;
   const msgs = room.chat || [];
   // only redraw when something actually arrived, so typing isn't interrupted
   if(log.dataset.count === String(msgs.length)) return;
