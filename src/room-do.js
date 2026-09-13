@@ -228,7 +228,16 @@ export class Room {
         if (action === 'raise') {
           if (g.mode !== 'contested' || g.turnIdx !== myIdx) return json(400, { error: 'Not your turn' });
           const amount = parseInt(body.amount, 10);
-          if (!(amount > g.currentBid) || amount > bidders[myIdx].budget) return json(400, { error: 'Invalid raise' });
+          // Opening at $0 is allowed: it stakes a free claim on a lot nobody
+          // has bid for yet. The opponent can still take it off you by paying
+          // $1, so it can't be used to dodge a real auction — but if they
+          // don't want it either, you get it for nothing instead of it going
+          // unsold.
+          const noBidYet = g.currentBidderIdx === null || g.currentBidderIdx === undefined;
+          const validOpen = amount === 0 && noBidYet;
+          if (!validOpen && (!(amount > g.currentBid) || amount > bidders[myIdx].budget)) {
+            return json(400, { error: 'Invalid raise' });
+          }
           if (checkTeamConsensus(room, myIdx, body.nickname, 'raise', amount)) applyResolvedAction(room, myIdx, 'raise', amount);
         } else if (action === 'pass') {
           if (g.mode !== 'contested' || g.turnIdx !== myIdx) return json(400, { error: 'Not your turn' });
