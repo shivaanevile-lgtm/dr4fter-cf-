@@ -215,7 +215,7 @@ function applyResolvedAction(room, sideIdx, type, amount){
   const bidders = sidesOf(room);
   if (type === 'raise') {
     g.currentBid = amount; g.currentBidderIdx = sideIdx; g.passStreak = 0;
-    g.tickerLog.push(`${sideLabel(room, sideIdx)}: $${amount}`);
+    g.tickerLog.push(amount === 0 ? `${sideLabel(room, sideIdx)}: free claim` : `${sideLabel(room, sideIdx)}: $${amount}`);
     g.turnIdx = 1 - sideIdx;
   } else if (type === 'pass') {
     g.tickerLog.push(`${sideLabel(room, sideIdx)}: pass`);
