@@ -2229,7 +2229,7 @@ function humanRaise(amount){
   if(P.mode==='contested'){
     P.currentBid = amount; P.currentBidder = 0;
     P.passStreak = 0;
-    P.tickerLog.push(`You: $${amount}`);
+    P.tickerLog.push(amount === 0 ? 'You: free claim' : `You: $${amount}`);
     P.turn = 1;
     renderPracticeDraft();
     setTimeout(aiTakeTurn, 550);
@@ -2526,6 +2526,8 @@ function renderPracticeDraft(){
       renderBidControls({
         budget: P.players[0].budget,
         picksLeft: 5 - P.players[0].items.length,
+        freeClaim: (P.currentBidder===null||P.currentBidder===undefined) ? ()=>humanRaise(0) : null,
+        freeLabel: 'Take it for free',
         minAmount: P.currentBid+1,
         lotKey: P.currentLot.name+'|'+P.currentBid,
         primaryLabel: 'Raise',
@@ -2613,6 +2615,7 @@ function renderBidControls(opts){
   const freeBtn = $('btn-take-free');
   if(opts.freeClaim && !opts.freeMode){
     freeBtn.classList.remove('hidden');
+    freeBtn.textContent = opts.freeLabel || 'Take it for free';
     freeBtn.onclick = opts.freeClaim;
   } else {
     freeBtn.classList.add('hidden');
@@ -2841,9 +2844,12 @@ function renderOnlineDraft(room){
     $('status-line').textContent = myTurn ? "Your turn — raise or pass" : `● Waiting for ${sideLabelClient(room, g.turnIdx)} to respond…`;
     if(myTurn){
       renderTeamConsensusBanner(room, myIdx);
+      const noBidYet = g.currentBidderIdx===null || g.currentBidderIdx===undefined;
       renderBidControls({
         budget: bidders[myIdx].budget,
         picksLeft: 5 - (bidders[myIdx].items||[]).length,
+        freeClaim: noBidYet ? ()=>onlineAction('raise',{amount:0}) : null,
+        freeLabel: 'Take it for free',
         minAmount: g.currentBid+1,
         lotKey: g.currentLot.name+'|'+g.currentBid,
         primaryLabel: 'Raise',
