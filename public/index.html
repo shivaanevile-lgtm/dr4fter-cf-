@@ -561,6 +561,7 @@
           <button class="btn btn-raise" id="btn-submit-bid">Raise</button>
           <button class="btn btn-skip" id="btn-secondary-bid">Pass</button>
         </div>
+        <button class="btn btn-secondary hidden" id="btn-take-free">Take it for free</button>
         <div class="afford-note" id="afford-note"></div>
         <div class="bid-caption" id="bid-caption"></div>
       </div>
@@ -714,6 +715,21 @@ tvshows:{emoji:'📺',name:'Best TV Shows',items:[
  ['Stranger Things',6],['Seinfeld',6],['The Crown',5],['Better Call Saul',7],['Chernobyl',6],['Fargo',6],
  ['Succession',7],['The Bear',6],['True Detective',6],['Cheers',4],['Parks and Recreation',5],
  ['Curb Your Enthusiasm',5],['The West Wing',5],['Ted Lasso',5]]},
+house:{emoji:'🏰',name:'Build A House',items:[
+ ['An entire castle as the house',9],['A 12-car parking garage full of supercars',9],
+ ['A private jet and its own landing strip',10],['A pool with a waterfall',8],
+ ['An entire forest on the grounds',8],['A full gym',7],
+ ['A rec room with pool table and table tennis',7],['A basketball court',7],
+ ['A soccer field',7],['A pickleball court',6],['A gated entrance with a long driveway',6],
+ ['A front-yard garden',5],['A chicken farm',4],
+ ['A home cinema with reclining seats',8],['A rooftop terrace with a firepit',7],
+ ['An underground wine cellar',6],['A library with a rolling ladder',6],
+ ['A guest house for visitors',7],['Heated floors throughout',5],
+ ['A panic room behind a bookshelf',7],['A koi pond and Japanese garden',6],
+ ['Solar panels and a battery wall',6],['A helipad on the roof',9],
+ ['A recording studio in the basement',7],['A bowling alley',8],
+ ['Floor-to-ceiling windows with a valley view',8],['A dog run with an agility course',5],
+ ['A spa with a sauna and steam room',7]]},
 videogames:{emoji:'🎮',name:'Best Video Games',items:[
  ['The Legend of Zelda: Breath of the Wild',9],['Elden Ring',9],['Minecraft',8],['Red Dead Redemption 2',9],
  ['The Witcher 3',9],['Super Mario Odyssey',8],['Portal 2',8],['Grand Theft Auto V',8],
@@ -1256,6 +1272,7 @@ function checkText(raw, label, maxLen){
 // knowing the subject. Shown as a badge on the theme chips.
 const THEME_LEVEL = {
   backyard:'easy', gaming:'easy', vacation:'easy', perfectlife:'easy', fruit:'easy',
+  house:'easy',
   bunker:'medium', superhero:'medium', videogames:'medium',
   movies:'deep', tvshows:'deep', music:'deep',
   sandwich:'easy', pizza:'easy', island:'easy',
@@ -1583,8 +1600,8 @@ const THEME_PACKS = [
     themes:['movie','movies','tvshows','music','videogames'] },
   { key:'football', name:'Football',  emoji:'⚽', blurb:'squads & rivalries',
     themes:['football','rivals_clasico','rivals_manchester','rivals_milan','rivals_london'] },
-  { key:'worlds',   name:'Big Ideas', emoji:'🏝️', blurb:'islands, powers, lives',
-    themes:['island','superhero'] }
+  { key:'worlds',   name:'Big Ideas', emoji:'🏝️', blurb:'islands, houses, powers',
+    themes:['island','house','superhero'] }
 ];
 function allThemeMeta(key){
   if(CATEGORY_THEMES[key]) return CATEGORY_THEMES[key];
@@ -2261,7 +2278,11 @@ function humanSkip(){
 function humanClaim(amountStr){
   const P = App.practice;
   const budget = P.players[P.soloPlayer].budget;
-  let amount = budget===0 ? 0 : Math.max(1, Math.min(budget, parseInt(amountStr||'1',10)||1));
+  const asked = parseInt(amountStr, 10);
+  // $0 is a real choice on an uncontested lot, not just the broke fallback
+  let amount = (asked === 0 || budget === 0)
+    ? 0
+    : Math.max(1, Math.min(budget, isNaN(asked) ? 1 : asked));
   resolveLotWinner(P, P.soloPlayer, amount);
 }
 
@@ -2522,6 +2543,7 @@ function renderPracticeDraft(){
       renderBidControls({
         budget, minAmount:1, freeMode: budget===0,
         picksLeft: 5 - P.players[0].items.length,
+        freeClaim: ()=>humanClaim(0),
         lotKey: P.currentLot.name,
         primaryLabel: 'Claim',
         secondaryLabel: `Skip it (${3-P.skipsUsed} left)`,
@@ -2586,6 +2608,15 @@ function renderBidControls(opts){
 
   // Grade the bid button by how much room the player actually has left, so
   // running low is visible before it becomes a surprise.
+  // Uncontested lots can simply be taken — no need to spend a dollar you
+  // might want later.
+  const freeBtn = $('btn-take-free');
+  if(opts.freeClaim && !opts.freeMode){
+    freeBtn.classList.remove('hidden');
+    freeBtn.onclick = opts.freeClaim;
+  } else {
+    freeBtn.classList.add('hidden');
+  }
   applyAffordability(primaryBtn, opts);
   $('bid-caption').textContent = `You have $${opts.budget} left.`;
 }
@@ -2833,6 +2864,7 @@ function renderOnlineDraft(room){
       renderBidControls({
         budget, minAmount:1, freeMode: budget===0,
         picksLeft: 5 - (bidders[myIdx].items||[]).length,
+        freeClaim: ()=>onlineAction('claim',{amount:0}),
         lotKey: g.currentLot.name,
         primaryLabel: 'Claim',
         secondaryLabel: canSkip ? `Skip it (${3-(g.skipsUsed||0)} left)` : '',
