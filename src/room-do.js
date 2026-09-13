@@ -239,8 +239,14 @@ export class Room {
           if (checkTeamConsensus(room, myIdx, body.nickname, 'skip', null)) applyResolvedAction(room, myIdx, 'skip', null);
         } else if (action === 'claim') {
           if (g.mode !== 'solo' || g.soloPlayerIdx !== myIdx) return json(400, { error: 'Not your turn' });
+          // Nobody else needs this lot, so $0 is allowed — you can simply take
+          // it rather than being forced to spend. Only reachable in solo mode,
+          // which is why it can't be used to dodge a real auction.
           const budget = bidders[myIdx].budget;
-          const amount = budget === 0 ? 0 : Math.max(1, Math.min(budget, parseInt(body.amount, 10) || 1));
+          const asked = parseInt(body.amount, 10);
+          const amount = (asked === 0 || budget === 0)
+            ? 0
+            : Math.max(1, Math.min(budget, isNaN(asked) ? 1 : asked));
           if (checkTeamConsensus(room, myIdx, body.nickname, 'claim', amount)) applyResolvedAction(room, myIdx, 'claim', amount);
         }
 
