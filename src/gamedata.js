@@ -61,6 +61,21 @@ tvshows:{emoji:'📺',name:'Best TV Shows',items:[
  ['Stranger Things',6],['Seinfeld',6],['The Crown',5],['Better Call Saul',7],['Chernobyl',6],['Fargo',6],
  ['Succession',7],['The Bear',6],['True Detective',6],['Cheers',4],['Parks and Recreation',5],
  ['Curb Your Enthusiasm',5],['The West Wing',5],['Ted Lasso',5]]},
+house:{emoji:'🏰',name:'Build A House',items:[
+ ['An entire castle as the house',9],['A 12-car parking garage full of supercars',9],
+ ['A private jet and its own landing strip',10],['A pool with a waterfall',8],
+ ['An entire forest on the grounds',8],['A full gym',7],
+ ['A rec room with pool table and table tennis',7],['A basketball court',7],
+ ['A soccer field',7],['A pickleball court',6],['A gated entrance with a long driveway',6],
+ ['A front-yard garden',5],['A chicken farm',4],
+ ['A home cinema with reclining seats',8],['A rooftop terrace with a firepit',7],
+ ['An underground wine cellar',6],['A library with a rolling ladder',6],
+ ['A guest house for visitors',7],['Heated floors throughout',5],
+ ['A panic room behind a bookshelf',7],['A koi pond and Japanese garden',6],
+ ['Solar panels and a battery wall',6],['A helipad on the roof',9],
+ ['A recording studio in the basement',7],['A bowling alley',8],
+ ['Floor-to-ceiling windows with a valley view',8],['A dog run with an agility course',5],
+ ['A spa with a sauna and steam room',7]]},
 videogames:{emoji:'🎮',name:'Best Video Games',items:[
  ['The Legend of Zelda: Breath of the Wild',9],['Elden Ring',9],['Minecraft',8],['Red Dead Redemption 2',9],
  ['The Witcher 3',9],['Super Mario Odyssey',8],['Portal 2',8],['Grand Theft Auto V',8],
@@ -603,6 +618,7 @@ function checkText(raw, label, maxLen){
 // knowing the subject. Shown as a badge on the theme chips.
 const THEME_LEVEL = {
   backyard:'easy', gaming:'easy', vacation:'easy', perfectlife:'easy', fruit:'easy',
+  house:'easy',
   bunker:'medium', superhero:'medium', videogames:'medium',
   movies:'deep', tvshows:'deep', music:'deep',
   sandwich:'easy', pizza:'easy', island:'easy',
