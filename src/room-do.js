@@ -2,7 +2,7 @@ import {
   resultIdGen, buildResultSnapshot, autoFillRemaining, resolveThemeItems,
   buildCategoryQueue, draftedNames, newGame, playerNeedsCat, roomHost,
   sidesOf, sideLabel, mySideIndex, checkTeamConsensus, tickPendingTeamAction,
-  applyResolvedAction, resolveItemToken, findHolder, drawNextLot, rerollLot,
+  applyResolvedAction, resolveItemToken, findHolder, drawNextLot, rerollLot, catThemeFor,
   hostPickOptions, resolveLotWinner, roomExpired, expiryError, shuffle,
   CATEGORY_THEMES, ITEM_BY_ID, checkText
 } from './engine.js';
@@ -64,11 +64,12 @@ export class Room {
             name: themeResolved.name, emoji: themeResolved.emoji,
             categoryTheme: themeResolved.categoryTheme,
             items: themeResolved.items || null,
-            custom: (body.theme && body.theme.customTheme) || null
+            custom: (body.theme && body.theme.customTheme) || null,
+            slotTheme: themeResolved.slotTheme || null
           },
           players: hostMode === '2v2'
-            ? [{ nickname: body.nickname, role: 'creator', team: 0 }]
-            : [{ nickname: body.nickname, role: hostMode === '3p' ? 'host' : 'creator', budget: 20, items: [] }],
+            ? [{ nickname: body.nickname, clientId: body.clientId || null, role: 'creator', team: 0 }]
+            : [{ nickname: body.nickname, clientId: body.clientId || null, role: hostMode === '3p' ? 'host' : 'creator', budget: 20, items: [] }],
           teams: hostMode === '2v2' ? [{ budget: 20, items: [] }, { budget: 20, items: [] }] : undefined,
           game: null,
           chat: [],
@@ -107,6 +108,8 @@ export class Room {
       if (action === 'join') {
         const needed = room.hostMode === '3p' ? 3 : room.hostMode === '2v2' ? 4 : 2;
         if (room.players.some(p => p.nickname === body.nickname)) {
+          const back = room.players.find(p => p.nickname === body.nickname);
+          if (body.clientId) back.clientId = body.clientId;
           // Rejoining with the same nickname: their earlier attempt landed but
           // the response never reached them. Welcome them back rather than erroring.
           return json(200, { room });
@@ -115,11 +118,13 @@ export class Room {
           return json(400, { error: `Room is full (${room.players.length}/${needed}). Players already in: ${room.players.map(p => `${p.nickname}[${p.role}]`).join(', ')}.` });
         }
         if (room.hostMode === '2v2') {
+          // Seat them on whichever side has room; the host can rearrange
+          // freely in the lobby before starting.
           const counts = [0, 0];
           room.players.forEach(p => counts[p.team]++);
-          room.players.push({ nickname: body.nickname, role: 'bidder', team: counts[0] < 2 ? 0 : 1 });
+          room.players.push({ nickname: body.nickname, clientId: body.clientId || null, role: 'bidder', team: counts[0] <= counts[1] && counts[0] < 2 ? 0 : 1 });
         } else {
-          room.players.push({ nickname: body.nickname, role: 'bidder', budget: 20, items: [] });
+          room.players.push({ nickname: body.nickname, clientId: body.clientId || null, role: 'bidder', budget: 20, items: [] });
         }
         // The game no longer starts itself — the host presses Start. That's what
         // makes kicking useful: a full room can still be reshuffled first.
@@ -139,9 +144,16 @@ export class Room {
         if (room.players.length < needed) {
           return json(400, { error: `Need ${needed} players to start — ${room.players.length} so far.` });
         }
+        if (room.hostMode === '2v2') {
+          const counts = [0, 0];
+          room.players.forEach(p => counts[p.team]++);
+          if (counts[0] !== 2 || counts[1] !== 2) {
+            return json(400, { error: `Teams are uneven — Team A has ${counts[0]}, Team B has ${counts[1]}. Both need 2.` });
+          }
+        }
         room.phase = 'drafting';
         if (room.hostMode === '2v2') room.teams = [{ budget: 20, items: [] }, { budget: 20, items: [] }];
-        room.game = newGame(resolveThemeItems({ themeKey: room.theme.key, customTheme: room.theme.custom }));
+        room.game = newGame(resolveThemeItems({ themeKey: room.theme.key, customTheme: room.theme.custom, slotTheme: room.theme.slotTheme }));
         room.game.resultId = resultIdGen();
         drawNextLot(room);
         room.chat = room.chat || [];
@@ -178,6 +190,39 @@ export class Room {
         room.chat.push({ sys: true, text: `${body.nickname} left`, at: Date.now() });
         await this.save(room);
         return json(200, { room, left: true });
+      }
+
+      if (action === 'setTeam') {
+        const requester = room.players.find(p => p.nickname === body.nickname);
+        if (!requester || (requester.role !== 'host' && requester.role !== 'creator')) {
+          return json(403, { error: 'Only the host can arrange the teams' });
+        }
+        if (room.hostMode !== '2v2') return json(400, { error: 'This room has no teams' });
+        if (room.phase !== 'lobby') return json(400, { error: 'Teams are locked once the draft starts' });
+        const target = room.players.find(p => p.nickname === String(body.target || ''));
+        if (!target) return json(400, { error: `${body.target} isn't in this room.` });
+        const team = parseInt(body.team, 10);
+        if (team !== 0 && team !== 1) return json(400, { error: 'Team must be A or B' });
+        if (target.team === team) return json(200, { room });          // already there
+        const onDest = room.players.filter(p => p.team === team);
+        room.chat = room.chat || [];
+        if (onDest.length >= 2) {
+          // Both sides full: swap rather than refuse, so the host can still
+          // rearrange a balanced-but-unwanted pairing. With two per side,
+          // repeating this reaches any line-up.
+          const partner = body.swapWith
+            ? onDest.find(p => p.nickname === body.swapWith) || onDest[0]
+            : onDest[0];
+          const from = target.team;
+          target.team = team;
+          partner.team = from;
+          room.chat.push({ sys: true, text: `${target.nickname} and ${partner.nickname} swapped teams`, at: Date.now() });
+        } else {
+          target.team = team;
+          room.chat.push({ sys: true, text: `${target.nickname} moved to Team ${team === 0 ? 'A' : 'B'}`, at: Date.now() });
+        }
+        await this.save(room);
+        return json(200, { room });
       }
 
       if (action === 'kick') {
@@ -283,7 +328,7 @@ export class Room {
           let rating = parseInt(body.rating, 10);
           if (isNaN(rating)) rating = 6;
           rating = Math.max(1, Math.min(10, rating));
-          const cat = g.catThemeKey ? (g.pickCat || CATEGORY_THEMES[g.catThemeKey].cats[g.catIdx]) : null;
+          const cat = g.catThemeKey ? (g.pickCat || (catThemeFor(room) || CATEGORY_THEMES[g.catThemeKey]).cats[g.catIdx]) : null;
           chosen = { name: arg, r: rating, cat, custom: true };
         } else {
           if (!options.length) { room.phase = 'results'; g.currentLot = null; g.awaitingHostPick = false; }
@@ -305,7 +350,7 @@ export class Room {
         const bidders = sidesOf(room);
         let wanting;
         if (g.catThemeKey) {
-          const ct = CATEGORY_THEMES[g.catThemeKey];
+          const ct = (catThemeFor(room) || CATEGORY_THEMES[g.catThemeKey]);
           wanting = bidders.map((p, i) => i).filter(i => playerNeedsCat(bidders[i], chosen.cat, ct.required));
         } else {
           wanting = bidders.map((p, i) => i).filter(i => (bidders[i].items || []).length < 5);
@@ -335,7 +380,8 @@ export class Room {
           name: themeResolved.name, emoji: themeResolved.emoji,
           categoryTheme: themeResolved.categoryTheme,
           items: themeResolved.items || null,
-          custom: (body.theme && body.theme.customTheme) || null
+          custom: (body.theme && body.theme.customTheme) || null,
+          slotTheme: themeResolved.slotTheme || null
         };
         if (room.hostMode === '2v2') room.teams = [{ budget: 20, items: [] }, { budget: 20, items: [] }];
         else room.players.forEach(p => { if (p.role !== 'host') { p.budget = 20; p.items = []; } });
@@ -450,7 +496,7 @@ export class Room {
           if (holder && holder.sideIdx === targetIdx) return json(400, { error: `${sideLabel(room, targetIdx)} already has "${rec.name}".` });
           const item = holder ? holder.item : { name: rec.name, r: rec.r, cat: rec.cat, paid: 0 };
           if (g.catThemeKey && item.cat) {
-            const ct = CATEGORY_THEMES[g.catThemeKey];
+            const ct = (catThemeFor(room) || CATEGORY_THEMES[g.catThemeKey]);
             const have = (bidders[targetIdx].items || []).filter(it => it.cat === item.cat).length;
             if (have >= ct.required[item.cat]) return json(400, { error: `${sideLabel(room, targetIdx)}'s ${item.cat} slot${ct.required[item.cat] > 1 ? 's are' : ' is'} already full (${have}/${ct.required[item.cat]}).` });
           } else if (!g.catThemeKey && (bidders[targetIdx].items || []).length >= 5) {
@@ -477,7 +523,7 @@ export class Room {
           if (holder.sideIdx === myIdx) return json(400, { error: `You already have "${rec.name}" — you can't steal from yourself.` });
           const stolen = holder.item;
           if (g.catThemeKey && stolen.cat) {
-            const ct = CATEGORY_THEMES[g.catThemeKey];
+            const ct = (catThemeFor(room) || CATEGORY_THEMES[g.catThemeKey]);
             const have = (bidders[myIdx].items || []).filter(it => it.cat === stolen.cat).length;
             if (have >= ct.required[stolen.cat]) return json(400, { error: `Your ${stolen.cat} slot${ct.required[stolen.cat] > 1 ? 's are' : ' is'} already full (${have}/${ct.required[stolen.cat]}).` });
           } else if (!g.catThemeKey && (bidders[myIdx].items || []).length >= 5) {
