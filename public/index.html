@@ -1338,14 +1338,31 @@ const VISUALISABLE = {
   gaming:   { subject:'a gaming room', style:'wide photo of a gaming setup room interior, LED lighting, realistic' },
   bunker:   { subject:'an underground bunker', style:'wide photo of an underground survival bunker interior, realistic' },
   island:   { subject:'a private island', style:'aerial photo of a small private island, tropical, realistic' },
+  house:    { subject:'a huge luxury estate', style:'wide exterior photo of a vast luxury mansion estate and its grounds, aerial drone view, golden hour, realistic' },
   pizza:    { subject:'a pizza', style:'overhead food photo of a whole pizza on a wooden board, realistic' },
   sandwich: { subject:'a sandwich', style:'close-up food photo of a stacked sandwich cut in half, realistic' }
 };
-function canVisualise(themeKey){ return !!VISUALISABLE[themeKey]; }
+function canVisualise(themeKey, room){
+  if(VISUALISABLE[themeKey]) return true;
+  // A custom theme built in "kit out a place" mode describes a real space, so
+  // it can be pictured too — the subject is whatever the player typed.
+  return themeKey === 'custom' && !!customPlaceName(room);
+}
+// The typed subject, if this game is a custom PLACE (not a "rank the things" list).
+function customPlaceName(room){
+  const c = room ? (room.theme && room.theme.custom) : App.customTheme;
+  return (c && c.mode === 'space' && c.name) ? c.name : null;
+}
 // Builds the text prompt from the items someone actually drafted.
-function buildVisualPrompt(themeKey, items){
-  const v = VISUALISABLE[themeKey];
-  if(!v) return null;
+function buildVisualPrompt(themeKey, items, room){
+  let v = VISUALISABLE[themeKey];
+  if(!v){
+    const place = customPlaceName(room);
+    if(!place) return null;
+    const p = place.trim().toLowerCase();
+    const article = /^[aeiou]/.test(p) ? 'an' : 'a';
+    v = { subject: `${article} ${p}`, style: `wide photo of ${article} ${p}, realistic, natural light` };
+  }
   // Image models latch onto the first concrete noun and drop the rest, so put
   // the drafted items FIRST and number them — the style direction goes last,
   // where it can't crowd them out.
@@ -1718,7 +1735,7 @@ function selectTheme(key){
 function useCustomTheme(mode){
   const raw = $('custom-theme-input').value.trim();
   if(!raw){ alert('Type a topic first.'); return; }
-  App.customTheme = { name: raw, items: generateCustomItems(raw, mode) };
+  App.customTheme = { name: raw, items: generateCustomItems(raw, mode), mode };
   App.themeKey = 'custom';
   document.querySelectorAll('.theme-chip').forEach(c=>c.classList.remove('selected'));
   sndClick();
@@ -3173,6 +3190,7 @@ function showResultsScreen(players, P){
     themeLabel: (P.themeEmoji||'')+' '+P.themeName,
     catThemeKey: P.catThemeKey,
     themeKey: App.themeKey,
+    room: { theme: { custom: App.customTheme } },
     mySideIdx: 0,
     resultKey: 'practice|'+P.gameId,
     onRematch: ()=>{ showScreen('screen-draft'); startPracticeGame(); }
@@ -3316,14 +3334,14 @@ function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
   const vWrap = $('visual-wrap'), vBtns = $('visual-buttons'), vStage = $('visual-stage');
   vStage.innerHTML = '';
   const visTheme = opts.themeKey || opts.catThemeKey;
-  if(canVisualise(visTheme)){
+  if(canVisualise(visTheme, opts.room)){
     vWrap.classList.remove('hidden');
     vBtns.innerHTML = nicks.map((n,i)=>
       `<button class="btn btn-secondary" data-side="${i}" style="margin-top:0;">✨ ${escapeHtml(n.split(' (')[0])}'s</button>`).join('');
     vBtns.querySelectorAll('button').forEach(btn=>{
       btn.onclick = async ()=>{
         const i = +btn.dataset.side;
-        const prompt = buildVisualPrompt(visTheme, itemsArr[i]);
+        const prompt = buildVisualPrompt(visTheme, itemsArr[i], opts.room);
         if(!prompt) return;
         sndClick();
         vStage.innerHTML = '<div class="visual-skel"></div><div class="visual-note">Generating… this takes a few seconds.</div>';
@@ -3781,7 +3799,8 @@ function loadRivals(){
   try{ return JSON.parse(localStorage.getItem(RIVALS_KEY) || '{}') || {}; }catch(e){ return {}; }
 }
 function recordRivalry(room, myIdx, outcome){
-  if(!room || room.hostMode === '2v2') return;          // team games aren't 1v1
+  // practice games pass a theme-only stub with no players — nothing to record
+  if(!room || !Array.isArray(room.players) || room.hostMode === '2v2') return;
   const me = room.players.find(p=>p.nickname===App.nickname);
   const opp = room.players.find(p=>p.nickname!==App.nickname && p.role!=='host');
   if(!me || !opp || !opp.clientId || opp.clientId === 'c_anon') return;
@@ -3801,7 +3820,7 @@ function recordRivalry(room, myIdx, outcome){
   }catch(e){}
 }
 function rivalryLine(room){
-  if(!room || room.hostMode === '2v2') return '';
+  if(!room || !Array.isArray(room.players) || room.hostMode === '2v2') return '';
   const opp = room.players.find(p=>p.nickname!==App.nickname && p.role!=='host');
   if(!opp || !opp.clientId) return '';
   const rec = loadRivals()[opp.clientId];
