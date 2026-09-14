@@ -167,6 +167,14 @@
     font-weight:500; color:var(--chalk-soft); margin-top:var(--s2);
     letter-spacing:.02em;
   }
+  .bump-row{ display:flex; gap:6px; margin-top:var(--s2); }
+  .bump{ flex:1; padding:9px 0; border-radius:9px; border:1.5px solid var(--line);
+    background:var(--deck-2); color:var(--chalk); font-family:var(--num);
+    font-size:14px; font-weight:600; cursor:pointer; }
+  .bump:active{ transform:translateY(1px); }
+  .bump:disabled{ opacity:.35; cursor:not-allowed; }
+  .outbid-tally{ font-size:11.5px; color:var(--chalk-soft); text-align:center; margin-top:var(--s1); }
+  .outbid-tally.hot{ color:var(--volt); }
   .bid-caption{ font-size:12.5px; color:var(--chalk-soft); text-align:center; margin-top:var(--s2); }
   .afford-note{ font-size:12px; color:var(--chalk-soft); text-align:center; margin-top:var(--s2); }
   .afford-note.warn{ color:var(--gold); }
@@ -310,6 +318,22 @@
   @keyframes shimmer{ from{background-position:200% 0;} to{background-position:-200% 0;} }
 
   /* ---- overlays ---- */
+  #editor-overlay{ position:fixed; inset:0; background:rgba(6,14,28,.86); z-index:1600;
+    display:flex; align-items:flex-start; justify-content:center; padding:18px; overflow-y:auto; }
+  #editor-card{ background:var(--deck); border:1px solid var(--line); border-radius:16px;
+    padding:var(--s5) var(--s4); max-width:480px; width:100%; margin:auto; }
+  #editor-card h2{ font-family:var(--display); font-size:26px; text-transform:uppercase; }
+  .ed-cat{ background:var(--deck-2); border-radius:12px; padding:var(--s3); margin-top:var(--s3); }
+  .ed-cat-head{ display:flex; gap:6px; align-items:center; }
+  .ed-cat-head input{ flex:1; padding:9px var(--s3); font-size:14px; }
+  .ed-slots{ width:66px !important; flex:0 0 66px !important; text-align:center; }
+  .ed-item{ display:flex; gap:6px; margin-top:6px; }
+  .ed-item input.nm{ flex:1; padding:8px var(--s3); font-size:13.5px; }
+  .ed-item input.rt{ width:58px; flex:0 0 58px; padding:8px; font-size:13.5px; text-align:center; }
+  .ed-mini{ background:none; border:1px solid var(--line); color:var(--chalk-soft);
+    border-radius:8px; font-size:12px; padding:6px 10px; cursor:pointer; }
+  .saved-theme{ display:flex; align-items:center; gap:6px; background:var(--deck-2);
+    border-radius:10px; padding:9px var(--s3); margin-top:6px; font-size:13.5px; }
   #howto-overlay,#stats-overlay{
     position:fixed; inset:0; background:rgba(6,14,28,.82); z-index:1500;
     display:flex; align-items:center; justify-content:center; padding:18px; overflow-y:auto;
@@ -419,6 +443,20 @@
     </div>
   </div>
 
+  <div id="editor-overlay" class="hidden">
+    <div id="editor-card">
+      <h2 class="serif" style="margin:0 0 4px;">Build a slot draft</h2>
+      <p style="color:var(--chalk-soft); font-size:12.5px; margin:0 0 14px;">
+        Like the football or pizza drafts: name your slots, then fill each with options.</p>
+      <input type="text" id="ed-name" placeholder="Theme name, e.g. Build A Heist Crew" maxlength="40">
+      <div id="ed-cats"></div>
+      <button class="btn btn-secondary" id="btn-ed-addcat">+ add a slot</button>
+      <div id="ed-error" style="font-size:12px; color:var(--volt); margin-top:8px;"></div>
+      <button class="btn btn-primary" id="btn-ed-save">Save and use</button>
+      <button class="btn btn-ghost" id="btn-ed-close">cancel</button>
+    </div>
+  </div>
+
   <div id="howto-overlay" class="hidden">
     <div id="howto-card">
       <h2 class="serif" style="margin:0 0 4px;">How Dr4fter works</h2>
@@ -468,6 +506,8 @@
         <button class="btn btn-secondary" id="btn-use-custom-space">🏠 Kit out a place</button>
         <button class="btn btn-secondary" id="btn-use-custom-things">📋 Rank the things</button>
       </div>
+      <button class="btn btn-secondary" id="btn-open-editor" style="margin-top:8px;">🛠️ Build a slot draft…</button>
+      <div id="saved-themes"></div>
       <div style="font-size:11.5px; color:var(--chalk-soft); margin-top:7px; line-height:1.45;">
         <b>Kit out a place</b> bids on what goes <i>inside</i> it (TV, mini fridge, zipline).<br>
         <b>Rank the things</b> bids on versions of the thing itself.
@@ -557,11 +597,18 @@
       </div>
       <div id="bid-controls" class="hidden">
         <input type="number" id="bid-amount-input" inputmode="numeric" class="bid-amount-input">
+        <div class="bump-row" id="bump-row">
+          <button class="bump" data-bump="1">+1</button>
+          <button class="bump" data-bump="3">+3</button>
+          <button class="bump" data-bump="5">+5</button>
+          <button class="bump" data-bump="max">Max</button>
+        </div>
         <div class="btn-row" style="margin-top:10px;">
           <button class="btn btn-raise" id="btn-submit-bid">Raise</button>
           <button class="btn btn-skip" id="btn-secondary-bid">Pass</button>
         </div>
         <button class="btn btn-secondary hidden" id="btn-take-free">Take it for free</button>
+        <div class="outbid-tally" id="outbid-tally"></div>
         <div class="afford-note" id="afford-note"></div>
         <div class="bid-caption" id="bid-caption"></div>
       </div>
@@ -1796,8 +1843,27 @@ async function api(action, payload){
 function themePayload(){
   if(App.themeKey==='football') return {themeKey:'football'};
   if(App.themeKey==='custom') return {themeKey:'custom', customTheme:App.customTheme};
+  // a user-built slot draft travels with the room, since the server has no
+  // copy of it
+  if(App.userSlotTheme && String(App.themeKey).startsWith('userslot_')){
+    return {themeKey:'userslot', slotTheme:App.userSlotTheme};
+  }
   return {themeKey:App.themeKey};
 }
+// A nickname is just a label people change between rounds. The head-to-head
+// record needs something stable, so every device gets an id once and keeps it.
+const CLIENT_ID_KEY = 'dr4fter_client_id';
+function clientId(){
+  try{
+    let id = localStorage.getItem(CLIENT_ID_KEY);
+    if(!id){
+      id = 'c_' + Date.now().toString(36) + Math.random().toString(36).slice(2,10);
+      localStorage.setItem(CLIENT_ID_KEY, id);
+    }
+    return id;
+  }catch(e){ return 'c_anon'; }   // private browsing — no persistence, no record
+}
+
 const SESSION_KEY = 'dr4fter_session';
 function rememberSession(){
   try{ localStorage.setItem(SESSION_KEY, JSON.stringify({ code: App.roomCode, nickname: App.nickname, at: Date.now() })); }catch(e){}
@@ -1813,7 +1879,7 @@ function loadSession(){
 }
 async function createRoom(){
   try{
-    const data = await api('create', { nickname: App.nickname, hostMode: App.hostMode, theme: themePayload() });
+    const data = await api('create', { nickname: App.nickname, clientId: clientId(), hostMode: App.hostMode, theme: themePayload() });
     App.roomCode = data.room.code;
     rememberSession();
     enterLobby(data.room);
@@ -1822,7 +1888,7 @@ async function createRoom(){
 }
 async function joinRoom(){
   try{
-    const data = await api('join', { nickname: App.nickname });
+    const data = await api('join', { nickname: App.nickname, clientId: clientId() });
     rememberSession();
     // a rejoin can land mid-draft or even at results — go wherever the room is
     if(data.room.phase === 'lobby') enterLobby(data.room);
@@ -1891,11 +1957,19 @@ function renderLobbyPlayers(room){
   App.lobbySeenNicks = curNicks;
   if(room.hostMode==='2v2'){
     const canKick = room.players.some(p=>p.nickname===App.nickname && (p.role==='host'||p.role==='creator'));
+    const sizes = [room.players.filter(p=>p.team===0).length, room.players.filter(p=>p.team===1).length];
     const teamHTML = teamIdx => room.players.filter(p=>p.team===teamIdx)
-      .map(p=>`<div style="padding:4px 0; display:flex; align-items:center;">
+      .map(p=>{
+        const other = 1 - teamIdx;
+        // only offer the move when there's actually room on the other side
+        // always offer it — the server swaps when the other side is full
+        const canMove = canKick;
+        return `<div style="padding:4px 0; display:flex; align-items:center; gap:4px;">
         <span style="flex:1;">👤 <b>${escapeHtml(p.nickname)}</b></span>
+        ${canMove ? `<button class="kick-btn" data-move="${escapeHtml(p.nickname)}" data-to="${other}">${sizes[other]<2 ? '→ '+(other===0?'A':'B') : '⇄ swap'}</button>` : ''}
         ${canKick && p.nickname!==App.nickname ? `<button class="kick-btn" data-kick="${escapeHtml(p.nickname)}">remove</button>` : ''}
-      </div>`).join('')
+      </div>`;
+      }).join('')
       || '<div style="padding:4px 0; color:var(--chalk-soft); font-style:italic;">— open seat —</div>';
     wrap.innerHTML = `
       <div class="player-card" style="text-align:left; margin-bottom:8px;"><b>Team A</b>${teamHTML(0)}</div>
@@ -1913,7 +1987,16 @@ function renderLobbyPlayers(room){
   $('lobby-waiting').textContent = !full
     ? `Waiting for players to join… (${room.players.length}/${needed})`
     : (amHost ? 'Everyone is in — start when you\'re ready.' : 'Everyone is in — waiting for the host to start.');
-  $('btn-start-game').classList.toggle('hidden', !(amHost && full));
+  let startable = amHost && full;
+  if(startable && room.hostMode==='2v2'){
+    const a = room.players.filter(p=>p.team===0).length;
+    const b = room.players.filter(p=>p.team===1).length;
+    if(a!==2 || b!==2){
+      startable = false;
+      $('lobby-waiting').textContent = `Teams are uneven — A has ${a}, B has ${b}. Move someone before starting.`;
+    }
+  }
+  $('btn-start-game').classList.toggle('hidden', !startable);
   $('btn-start-game').onclick = ()=>{ sndClick(); onlineAction('start', {}); };
 
   // the host gets a remove button beside everyone else
@@ -1923,6 +2006,9 @@ function renderLobbyPlayers(room){
         const who = el.dataset.kick;
         if(confirm(`Remove ${who} from the room?`)) onlineAction('kick', { target: who });
       };
+    });
+    $('lobby-players').querySelectorAll('[data-move]').forEach(el=>{
+      el.onclick = ()=>{ sndClick(); onlineAction('setTeam', { target: el.dataset.move, team: +el.dataset.to }); };
     });
   }
   renderChat('lobby-chat', room);
@@ -2004,6 +2090,7 @@ function startPracticeGame(){
   const P = {
     catThemeKey: catKey,       // null (flat theme) or a CATEGORY_THEMES key
     gameId: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+    _resetOutbid: (App.outbidCount = 0),
     opponent: levelById(App.difficulty),
     difficulty: App.difficulty,
     themeName: theme.name, themeEmoji: theme.emoji,
@@ -2431,7 +2518,7 @@ async function aiTakeTurn(){
     const ceilingX = extremeCeiling(P, ai, opp);
     const bidX = P.currentBid + 1;
     if(bidX > ceilingX || bidX > ai.budget){ aiPass(); return; }
-    P.currentBid = bidX; P.currentBidder = 1; buzzOutbid();
+    P.currentBid = bidX; P.currentBidder = 1; buzzOutbid(); App.outbidCount = (App.outbidCount||0)+1;
     P.tickerLog.push(`${P.players[1].nick}: $${bidX}`);
     P.turn = 0;
     renderPracticeDraft();
@@ -2479,7 +2566,7 @@ async function aiTakeTurn(){
   if(amount<=cur) amount = Math.min(ai.budget, cur+1);
   if(amount>ai.budget || amount<=cur || amount>ceiling){ aiPass(); return; }
 
-  P.currentBid = amount; P.currentBidder = 1; buzzOutbid();
+  P.currentBid = amount; P.currentBidder = 1; buzzOutbid(); App.outbidCount = (App.outbidCount||0)+1;
   P.tickerLog.push(`AI: $${amount}`);
   P.turn = 0;
   renderPracticeDraft();
@@ -2620,6 +2707,27 @@ function renderBidControls(opts){
   } else {
     freeBtn.classList.add('hidden');
   }
+  // quick increments — typing a number on a phone mid-auction is miserable
+  const bumpRow = $('bump-row');
+  if(opts.freeMode){ bumpRow.classList.add('hidden'); }
+  else {
+    bumpRow.classList.remove('hidden');
+    bumpRow.querySelectorAll('.bump').forEach(b=>{
+      const kind = b.dataset.bump;
+      const target = kind==='max' ? opts.budget : (opts.minAmount - 1) + (+kind);
+      b.disabled = target > opts.budget || target < opts.minAmount;
+      b.textContent = kind==='max' ? 'Max' : '+'+kind;
+      b.onclick = ()=>{
+        input.value = String(Math.min(opts.budget, Math.max(opts.minAmount, target)));
+        sndClick();
+        applyAffordability(primaryBtn, opts);
+      };
+    });
+  }
+  const tally = $('outbid-tally');
+  const n = App.outbidCount || 0;
+  tally.textContent = n ? `Outbid ${n} time${n===1?'':'s'} this game` : '';
+  tally.classList.toggle('hot', n >= 4);
   applyAffordability(primaryBtn, opts);
   $('bid-caption').textContent = `You have $${opts.budget} left.`;
 }
@@ -2761,12 +2869,15 @@ function renderOnlineDraft(room){
     }
   }
 
+  if(App.lastSeenGameId !== g.gameId){ App.lastSeenGameId = g.gameId; App.outbidCount = 0; }
+
   // someone just took the lead away from us
   const holder = g.currentBidderIdx;
   const mineNow = mySideIndexClient(room);
   if(g.mode==='contested' && holder!==null && holder!==undefined && holder!==mineNow
      && App.lastBidHolder === mineNow && App.lastBidLot === g.currentLot.name){
     buzzOutbid();
+    App.outbidCount = (App.outbidCount || 0) + 1;
   }
   App.lastBidHolder = holder;
   App.lastBidLot = g.currentLot ? g.currentLot.name : null;
@@ -3122,6 +3233,7 @@ function renderResultsFromRoom(room){
     themeKey: room.theme.key,
     mySideIdx: myIdx,
     shareUrl: room.game.resultId ? (location.origin + '/r/' + room.game.resultId) : '',
+    room,
     resultKey,
     canRematch: !!amHostOrCreator,
     onRematch: goRematchThemePick
@@ -3176,9 +3288,11 @@ function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
       <div class="duel-foot">weighted rating ${j.weighted[0].toFixed(1)} vs ${j.weighted[1].toFixed(1)}
       <span style="opacity:.7;">(attackers count more)</span></div>`;
   }
+  const rivalry = opts.room ? rivalryLine(opts.room) : '';
   const card = document.createElement('div'); card.className='judgment-card';
   card.innerHTML = `<div class="jhead"><h2 class="serif">Judgment</h2><span class="${pillClass}">${escapeHtml(pillLabel)}</span></div>
-    <div class="judgment-text">${escapeHtml(paragraph)}</div>${duelHTML}`;
+    <div class="judgment-text">${escapeHtml(paragraph)}</div>${duelHTML}` +
+    (rivalry ? `<div class="duel-foot" style="font-style:normal;">${rivalry}</div>` : '');
   flavorWrap.appendChild(card);
 
   // stash what the share/export needs
@@ -3194,6 +3308,7 @@ function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
     if(myIdx != null && myIdx >= 0 && itemsArr[myIdx]){
       const outcome = j.winner === null ? 'tie' : (j.winner === myIdx ? 'win' : 'loss');
       recordGameResult(opts.themeLabel.replace(/^\S+\s/, ''), itemsArr[myIdx], budgets[myIdx], outcome);
+      if(opts.room) recordRivalry(opts.room, myIdx, outcome);
     }
   }
 
@@ -3456,6 +3571,160 @@ window.addEventListener('pagehide', ()=>{
   }catch(e){}
 });
 
+/* ---- Theme editor: build a full slot draft, not just a flat list ---- */
+const SAVED_THEMES_KEY = 'dr4fter_saved_themes';
+let edDraft = null;   // { name, cats:[{name, slots, items:[[name,rating]]}] }
+
+function loadSavedThemes(){
+  try{ return JSON.parse(localStorage.getItem(SAVED_THEMES_KEY) || '[]') || []; }catch(e){ return []; }
+}
+function saveSavedThemes(list){
+  try{ localStorage.setItem(SAVED_THEMES_KEY, JSON.stringify(list)); }catch(e){}
+}
+function renderSavedThemes(){
+  const wrap = $('saved-themes');
+  if(!wrap) return;
+  const list = loadSavedThemes();
+  if(!list.length){ wrap.innerHTML = ''; return; }
+  wrap.innerHTML = '<div class="section-label">your slot drafts</div>' + list.map((t,i)=>
+    `<div class="saved-theme">
+       <span style="flex:1;">🛠️ <b>${escapeHtml(t.name)}</b> <span style="color:var(--chalk-soft);">· ${t.cats.length} slots</span></span>
+       <button class="ed-mini" data-use="${i}">use</button>
+       <button class="ed-mini" data-edit="${i}">edit</button>
+       <button class="ed-mini" data-del="${i}">✕</button>
+     </div>`).join('');
+  wrap.querySelectorAll('[data-use]').forEach(b=> b.onclick = ()=>useSavedTheme(+b.dataset.use));
+  wrap.querySelectorAll('[data-edit]').forEach(b=> b.onclick = ()=>openEditor(loadSavedThemes()[+b.dataset.edit]));
+  wrap.querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{
+    const l = loadSavedThemes();
+    if(confirm(`Delete "${l[+b.dataset.del].name}"?`)){ l.splice(+b.dataset.del,1); saveSavedThemes(l); renderSavedThemes(); }
+  });
+}
+
+function openEditor(existing){
+  edDraft = existing
+    ? JSON.parse(JSON.stringify(existing))
+    : { name:'', cats:[ {name:'', slots:1, items:[['',6],['',6],['',6]]} ] };
+  $('ed-name').value = edDraft.name || '';
+  $('ed-error').textContent = '';
+  renderEditor();
+  $('editor-overlay').classList.remove('hidden');
+}
+function closeEditor(){ $('editor-overlay').classList.add('hidden'); edDraft = null; }
+
+function renderEditor(){
+  const wrap = $('ed-cats');
+  wrap.innerHTML = edDraft.cats.map((c,ci)=>`
+    <div class="ed-cat">
+      <div class="ed-cat-head">
+        <input type="text" data-cat="${ci}" value="${escapeHtml(c.name)}" placeholder="Slot name, e.g. Mastermind" maxlength="20">
+        <input type="number" class="ed-slots" data-slots="${ci}" value="${c.slots}" min="1" max="3" title="how many of this slot">
+        ${edDraft.cats.length>1 ? `<button class="ed-mini" data-delcat="${ci}">✕</button>` : ''}
+      </div>
+      ${c.items.map((it,ii)=>`
+        <div class="ed-item">
+          <input type="text" class="nm" data-item="${ci}.${ii}" value="${escapeHtml(it[0])}" placeholder="Option name" maxlength="60">
+          <input type="number" class="rt" data-rate="${ci}.${ii}" value="${it[1]}" min="1" max="10">
+          ${c.items.length>2 ? `<button class="ed-mini" data-delitem="${ci}.${ii}">✕</button>` : ''}
+        </div>`).join('')}
+      <button class="ed-mini" data-additem="${ci}" style="margin-top:8px;">+ option</button>
+    </div>`).join('');
+
+  const sync = ()=>{
+    $('ed-name') && (edDraft.name = $('ed-name').value);
+    wrap.querySelectorAll('[data-cat]').forEach(el=>{ edDraft.cats[+el.dataset.cat].name = el.value; });
+    wrap.querySelectorAll('[data-slots]').forEach(el=>{ edDraft.cats[+el.dataset.slots].slots = Math.max(1, Math.min(3, parseInt(el.value,10)||1)); });
+    wrap.querySelectorAll('[data-item]').forEach(el=>{ const [c,i]=el.dataset.item.split('.').map(Number); edDraft.cats[c].items[i][0] = el.value; });
+    wrap.querySelectorAll('[data-rate]').forEach(el=>{ const [c,i]=el.dataset.rate.split('.').map(Number); edDraft.cats[c].items[i][1] = Math.max(1, Math.min(10, parseInt(el.value,10)||6)); });
+  };
+  wrap.querySelectorAll('input').forEach(el=>{ el.oninput = sync; });
+  wrap.querySelectorAll('[data-additem]').forEach(b=> b.onclick = ()=>{ sync(); edDraft.cats[+b.dataset.additem].items.push(['',6]); renderEditor(); });
+  wrap.querySelectorAll('[data-delitem]').forEach(b=> b.onclick = ()=>{ sync(); const [c,i]=b.dataset.delitem.split('.').map(Number); edDraft.cats[c].items.splice(i,1); renderEditor(); });
+  wrap.querySelectorAll('[data-delcat]').forEach(b=> b.onclick = ()=>{ sync(); edDraft.cats.splice(+b.dataset.delcat,1); renderEditor(); });
+  $('ed-name').oninput = ()=>{ edDraft.name = $('ed-name').value; };
+}
+
+// Turn the editor draft into the same shape CATEGORY_THEMES uses.
+function compileEditorTheme(d){
+  const bad = checkText(d.name, 'Theme name');
+  if(bad) return { error: bad };
+  if(!d.cats.length) return { error: 'Add at least one slot.' };
+  const total = d.cats.reduce((n,c)=>n + c.slots, 0);
+  if(total !== 5) return { error: `Your slots add up to ${total}. A draft needs exactly 5 picks.` };
+
+  const cats = [], required = {}, pool = {}, catLabel = {}, catShort = {};
+  const seen = new Set();
+  for(const c of d.cats){
+    const nameBad = checkText(c.name, 'Slot name', 20);
+    if(nameBad) return { error: nameBad };
+    const key = c.name.trim().toUpperCase().replace(/[^A-Z0-9]/g,'_').slice(0,12);
+    if(!key) return { error: 'Every slot needs a name.' };
+    if(seen.has(key)) return { error: `Two slots are both called "${c.name}".` };
+    seen.add(key);
+    const items = c.items.filter(it=>String(it[0]).trim());
+    // each side must be able to fill this slot without running out
+    const need = c.slots * 2 + 1;
+    if(items.length < need) return { error: `"${c.name}" needs at least ${need} options (it has ${items.length}).` };
+    for(const it of items){
+      const itemBad = checkText(it[0], 'Option name');
+      if(itemBad) return { error: itemBad };
+    }
+    const names = items.map(it=>it[0].trim().toLowerCase());
+    if(new Set(names).size !== names.length) return { error: `"${c.name}" has two options with the same name.` };
+    cats.push(key);
+    required[key] = c.slots;
+    pool[key] = items.map(it=>[it[0].trim(), Math.max(1, Math.min(10, +it[1]||6))]);
+    catLabel[key] = '🛠️ ' + c.name.trim();
+    catShort[key] = c.name.trim();
+  }
+  return { theme: { name: d.name.trim(), emoji:'🛠️', cats, required, pool, icons:null, catLabel, catShort, resultView:'list' } };
+}
+
+function saveEditorTheme(){
+  const res = compileEditorTheme(edDraft);
+  if(res.error){ $('ed-error').textContent = res.error; return; }
+  const list = loadSavedThemes();
+  const idx = list.findIndex(t=>t.name === edDraft.name.trim());
+  if(idx >= 0) list[idx] = edDraft; else list.push(edDraft);
+  saveSavedThemes(list);
+  closeEditor();
+  renderSavedThemes();
+  useSavedTheme(idx >= 0 ? idx : list.length - 1);
+}
+
+// Register a saved theme as a playable category theme for this session.
+function useSavedTheme(i){
+  const d = loadSavedThemes()[i];
+  if(!d) return;
+  const res = compileEditorTheme(d);
+  if(res.error){ alert(res.error); return; }
+  const key = 'userslot_' + i;
+  CATEGORY_THEMES[key] = res.theme;
+  // ids are assigned at load, so give this one its own range on the fly
+  let next = 900000 + i * 500;
+  res.theme.cats.forEach(cat=>{
+    res.theme.pool[cat].forEach(p=>{
+      if(!ID_BY_NAME[key + '|' + p[0]]){
+        ITEM_BY_ID[next] = { id: next, name: p[0], r: p[1], themeKey: key, cat };
+        ID_BY_NAME[key + '|' + p[0]] = next;
+        next++;
+      }
+    });
+  });
+  App.themeKey = key;
+  App.customTheme = null;
+  App.userSlotTheme = res.theme;     // sent to the server for online play
+  document.querySelectorAll('.theme-chip').forEach(c=>c.classList.remove('selected'));
+  sndClick();
+  alert(`"${res.theme.name}" is ready — pick Practice or an online room.`);
+}
+
+$('btn-open-editor').onclick = ()=>{ sndClick(); openEditor(null); };
+$('btn-ed-close').onclick = ()=>{ sndClick(); closeEditor(); };
+$('btn-ed-addcat').onclick = ()=>{ edDraft.cats.push({name:'', slots:1, items:[['',6],['',6],['',6]]}); renderEditor(); };
+$('btn-ed-save').onclick = ()=>{ sndClick(); saveEditorTheme(); };
+renderSavedThemes();
+
 /* ---- Chat: same component in the lobby and mid-draft ---- */
 function chatMarkup(id){
   return `<div class="chat-box">
@@ -3502,6 +3771,44 @@ function renderChat(hostId, room){
     : `<div class="chat-msg${m.nick===App.nickname?' me':''}"><span class="who">${escapeHtml(m.nick)}</span>${escapeHtml(m.text)}</div>`
   ).join('');
   log.scrollTop = log.scrollHeight;
+}
+
+/* ---- Head-to-head record, keyed on the opponent's DEVICE ----
+   Nicknames change between rounds, so the record follows the client id and
+   just displays whatever they last called themselves.                      */
+const RIVALS_KEY = 'dr4fter_rivals';
+function loadRivals(){
+  try{ return JSON.parse(localStorage.getItem(RIVALS_KEY) || '{}') || {}; }catch(e){ return {}; }
+}
+function recordRivalry(room, myIdx, outcome){
+  if(!room || room.hostMode === '2v2') return;          // team games aren't 1v1
+  const me = room.players.find(p=>p.nickname===App.nickname);
+  const opp = room.players.find(p=>p.nickname!==App.nickname && p.role!=='host');
+  if(!me || !opp || !opp.clientId || opp.clientId === 'c_anon') return;
+  if(opp.clientId === clientId()) return;               // same device both sides
+  try{
+    const all = loadRivals();
+    const rec = all[opp.clientId] || { w:0, l:0, d:0, names:[] };
+    if(outcome === 'win') rec.w++; else if(outcome === 'loss') rec.l++; else rec.d++;
+    if(!rec.names.includes(opp.nickname)){
+      rec.names.push(opp.nickname);
+      if(rec.names.length > 4) rec.names = rec.names.slice(-4);
+    }
+    rec.lastName = opp.nickname;
+    rec.at = Date.now();
+    all[opp.clientId] = rec;
+    localStorage.setItem(RIVALS_KEY, JSON.stringify(all));
+  }catch(e){}
+}
+function rivalryLine(room){
+  if(!room || room.hostMode === '2v2') return '';
+  const opp = room.players.find(p=>p.nickname!==App.nickname && p.role!=='host');
+  if(!opp || !opp.clientId) return '';
+  const rec = loadRivals()[opp.clientId];
+  if(!rec || (rec.w+rec.l+rec.d) === 0) return '';
+  const alias = rec.names.filter(n=>n!==opp.nickname);
+  return `Head to head vs ${escapeHtml(opp.nickname)}: ${rec.w}W ${rec.l}L${rec.d?' '+rec.d+'D':''}`
+       + (alias.length ? ` <span style="opacity:.65;">(also played as ${alias.map(escapeHtml).join(', ')})</span>` : '');
 }
 
 /* ---- Personal stats (local to this device) ---- */
