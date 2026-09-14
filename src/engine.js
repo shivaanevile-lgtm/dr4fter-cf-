@@ -40,7 +40,7 @@ function autoFillRemaining(room){
   let filled = 0;
 
   if (g.catThemeKey) {
-    const ct = CATEGORY_THEMES[g.catThemeKey];
+    const ct = catThemeFor(room);
     ct.cats.forEach(cat => {
       const available = shuffle(
         (ct.pool[cat]||[]).concat(ct.icons ? (ct.icons[cat]||[]) : [])
@@ -91,6 +91,12 @@ function shuffle(arr){
 }
 
 function resolveThemeItems(theme){
+  // A slot draft built in the app's editor: the definition travels with the
+  // room because the server has no copy of it.
+  if (theme.themeKey === 'userslot' && theme.slotTheme) {
+    const t = theme.slotTheme;
+    return { categoryTheme: 'userslot', name: t.name, emoji: t.emoji || '🛠️', slotTheme: t };
+  }
   if (CATEGORY_THEMES[theme.themeKey]) {
     const ct = CATEGORY_THEMES[theme.themeKey];
     return { categoryTheme: theme.themeKey, name: ct.name, emoji: ct.emoji };
@@ -103,8 +109,9 @@ function resolveThemeItems(theme){
   return { categoryTheme: null, name:t.name, emoji:t.emoji, items:t.items };
 }
 
-function buildCategoryQueue(catThemeKey, cat, exclude){
-  const ct = CATEGORY_THEMES[catThemeKey];
+function buildCategoryQueue(catThemeKey, cat, exclude, override){
+  // `override` carries a user-built slot theme, which only exists on its room
+  const ct = override || CATEGORY_THEMES[catThemeKey];
   const skip = exclude || new Set();
   const keep = arr => arr.filter(it => !skip.has(it[0]));
   const poolShuffled = shuffle(keep(ct.pool[cat]));
@@ -122,11 +129,21 @@ function draftedNames(room){
   return out;
 }
 
+// Category themes are normally global, but a user-built slot draft only
+// exists on the room that created it — so look there too.
+function catThemeFor(room){
+  const g = room.game;
+  if (!g || !g.catThemeKey) return null;
+  if (g.catThemeKey === 'userslot') return g.slotTheme || null;
+  return CATEGORY_THEMES[g.catThemeKey] || null;
+}
+
 function newGame(themeResolved){
   const g = {
     gameId: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
     resultId: resultIdGen(),
     catThemeKey: themeResolved.categoryTheme || null,
+    slotTheme: themeResolved.slotTheme || null,
     turnIdx: 0,
     openerIdx: 0,
     mode: 'idle',
@@ -143,8 +160,9 @@ function newGame(themeResolved){
     itemPool: null
   };
   if (g.catThemeKey) {
-    const ct = CATEGORY_THEMES[g.catThemeKey];
-    g.catQueue = buildCategoryQueue(g.catThemeKey, ct.cats[0]);
+    // no room yet at this point — the theme is whatever was just resolved
+    const ct = g.slotTheme || CATEGORY_THEMES[g.catThemeKey];
+    g.catQueue = buildCategoryQueue(g.catThemeKey, ct.cats[0], null, g.slotTheme);
   } else {
     g.itemPool = shuffle(themeResolved.items.map(it => ({ name: it[0], r: it[1] })));
   }
@@ -290,13 +308,13 @@ function drawNextLot(room){
   const g = room.game;
   const bidders = sidesOf(room);
   if (g.catThemeKey) {
-    const ct = CATEGORY_THEMES[g.catThemeKey];
+    const ct = catThemeFor(room);
     let cat = ct.cats[g.catIdx];
     while (g.catIdx < ct.cats.length && !bidders.some(p => playerNeedsCat(p, cat, ct.required))) {
       g.catIdx++;
       if (g.catIdx >= ct.cats.length) { room.phase = 'results'; g.currentLot=null; return; }
       cat = ct.cats[g.catIdx];
-      g.catQueue = buildCategoryQueue(g.catThemeKey, cat, draftedNames(room));
+      g.catQueue = buildCategoryQueue(g.catThemeKey, cat, draftedNames(room), g.slotTheme);
       g.skipsUsed = 0;
     }
     const wanting = bidders.map((p,i)=>i).filter(i => playerNeedsCat(bidders[i], cat, ct.required));
@@ -310,7 +328,7 @@ function drawNextLot(room){
     // console-queued items for this category come up first
     g.pendingNext = g.pendingNext || {};
     let cand = (g.pendingNext[cat] && g.pendingNext[cat].length) ? g.pendingNext[cat].shift() : g.catQueue.shift();
-    if (!cand) { g.catQueue = buildCategoryQueue(g.catThemeKey, cat, draftedNames(room)); cand = g.catQueue.shift(); }
+    if (!cand) { g.catQueue = buildCategoryQueue(g.catThemeKey, cat, draftedNames(room), g.slotTheme); cand = g.catQueue.shift(); }
     if (!cand) { room.phase='results'; g.currentLot=null; return; } // category genuinely exhausted
     g.currentLot = { name: cand[0], r: cand[1], cat };
     startLotMode(g, wanting);
@@ -336,7 +354,7 @@ function hostPickOptions(room){
   const g = room.game;
   const drafted = draftedNames(room);
   if (g.catThemeKey) {
-    const ct = CATEGORY_THEMES[g.catThemeKey];
+    const ct = catThemeFor(room);
     const cat = g.pickCat || ct.cats[g.catIdx];
     return (ct.pool[cat]||[]).concat(ct.icons ? (ct.icons[cat]||[]) : [])
       .filter(it => !drafted.has(it[0]))
@@ -428,7 +446,7 @@ export {
   resolveThemeItems, buildCategoryQueue, draftedNames, newGame,
   playerNeedsFlat, playerNeedsCat, roomHost, sidesOf, sideLabel, mySideIndex,
   checkTeamConsensus, tickPendingTeamAction, applyResolvedAction,
-  resolveItemToken, findHolder, drawNextLot, rerollLot, hostPickOptions, startLotMode,
+  resolveItemToken, findHolder, drawNextLot, rerollLot, catThemeFor, hostPickOptions, startLotMode,
   resolveLotWinner, unsoldLot, roomExpired, expiryError,
   ROOM_TTL_MS, THEMES, CATEGORY_THEMES, ITEM_BY_ID, checkText
 };
