@@ -88,20 +88,43 @@ export default {
       catch (e) { return json(400, { error: 'Bad JSON' }); }
       const prompt = String(body.prompt || '').trim().slice(0, 1500);
       if (!prompt) return json(400, { error: 'Missing prompt' });
+      const imageResponse = (bytes, mime) => new Response(bytes, {
+        headers: { 'Content-Type': mime, 'Cache-Control': 'public, max-age=31536000, immutable' }
+      });
+      const b64ToBytes = (b64) => Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+
+      // Gemini first when a key is configured — it follows multi-object
+      // prompts ("all five of these must appear") noticeably better than
+      // flux-schnell. Falls straight back to Workers AI if the key is absent
+      // or the call fails, so the button never simply breaks.
+      if (env.GEMINI_API_KEY) {
+        try {
+          const gRes = await fetch(
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            }
+          );
+          if (gRes.ok) {
+            const data = await gRes.json();
+            const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+            const img = parts.find(p => p.inlineData && p.inlineData.data);
+            if (img) {
+              return imageResponse(b64ToBytes(img.inlineData.data), img.inlineData.mimeType || 'image/png');
+            }
+          }
+          // anything unexpected: fall through to Workers AI below
+        } catch (e) { /* fall through */ }
+      }
+
       try {
         const out = await env.AI.run('@cf/black-forest-labs/flux-1-schnell', {
           prompt,
           steps: 6                       // schnell is built for few steps; 6 is a good quality/latency point
         });
-        // the model returns base64; hand back a real image so the client can
-        // just point an <img> at it
-        const bytes = Uint8Array.from(atob(out.image), c => c.charCodeAt(0));
-        return new Response(bytes, {
-          headers: {
-            'Content-Type': 'image/jpeg',
-            'Cache-Control': 'public, max-age=31536000, immutable'
-          }
-        });
+        return imageResponse(b64ToBytes(out.image), 'image/jpeg');
       } catch (e) {
         return json(502, { error: 'Could not generate an image right now: ' + (e.message || 'model error') });
       }
