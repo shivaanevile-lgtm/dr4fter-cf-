@@ -762,6 +762,18 @@ tvshows:{emoji:'📺',name:'Best TV Shows',items:[
  ['Stranger Things',6],['Seinfeld',6],['The Crown',5],['Better Call Saul',7],['Chernobyl',6],['Fargo',6],
  ['Succession',7],['The Bear',6],['True Detective',6],['Cheers',4],['Parks and Recreation',5],
  ['Curb Your Enthusiasm',5],['The West Wing',5],['Ted Lasso',5]]},
+bedroom:{emoji:'🛏️',name:'Build A Bedroom',items:[
+ ['A king-sized bed',9],['A full gaming setup',9],['A 75-inch TV',8],
+ ['A walk-in closet',8],['A private bathroom',8],['A sneaker wall',7],
+ ['A recliner chair',6],['A mini fridge',6],['LED strip lighting',5],
+ ['A balcony off the bedroom',8],['Blackout curtains',6],
+ ['A record player and vinyl shelf',6],['An ensuite with a rainfall shower',8],
+ ['A window seat with a view',7],['A desk with a triple monitor setup',7],
+ ['A projector and drop-down screen',7],['Soundproofed walls',6],
+ ['A hidden bookshelf door',7],['A hammock chair in the corner',5],
+ ['Heated floors',6],['A coffee station',5],['A pool table in the room',6],
+ ['A skylight over the bed',7],['A dartboard',4],['A beanbag corner',4],
+ ['A wall-length mirror',5],['A saltwater fish tank',7],['A neon sign',5]]},
 house:{emoji:'🏰',name:'Build A House',items:[
  ['An entire castle as the house',9],['A 12-car parking garage full of supercars',9],
  ['A private jet and its own landing strip',10],['A pool with a waterfall',8],
@@ -1319,7 +1331,7 @@ function checkText(raw, label, maxLen){
 // knowing the subject. Shown as a badge on the theme chips.
 const THEME_LEVEL = {
   backyard:'easy', gaming:'easy', vacation:'easy', perfectlife:'easy', fruit:'easy',
-  house:'easy',
+  house:'easy', bedroom:'easy',
   bunker:'medium', superhero:'medium', videogames:'medium',
   movies:'deep', tvshows:'deep', music:'deep',
   sandwich:'easy', pizza:'easy', island:'easy',
@@ -1339,6 +1351,7 @@ const VISUALISABLE = {
   bunker:   { subject:'an underground bunker', style:'wide photo of an underground survival bunker interior, realistic' },
   island:   { subject:'a private island', style:'aerial photo of a small private island, tropical, realistic' },
   house:    { subject:'a huge luxury estate', style:'wide exterior photo of a vast luxury mansion estate and its grounds, aerial drone view, golden hour, realistic' },
+  bedroom:  { subject:'a bedroom', style:'wide interior photo of a large modern bedroom, warm lighting, realistic' },
   pizza:    { subject:'a pizza', style:'overhead food photo of a whole pizza on a wooden board, realistic' },
   sandwich: { subject:'a sandwich', style:'close-up food photo of a stacked sandwich cut in half, realistic' }
 };
@@ -1363,15 +1376,15 @@ function buildVisualPrompt(themeKey, items, room){
     const article = /^[aeiou]/.test(p) ? 'an' : 'a';
     v = { subject: `${article} ${p}`, style: `wide photo of ${article} ${p}, realistic, natural light` };
   }
-  // Image models latch onto the first concrete noun and drop the rest, so put
-  // the drafted items FIRST and number them — the style direction goes last,
-  // where it can't crowd them out.
-  const names = items
-    .map(it => simplifyForPrompt(it.name))
-    .filter(Boolean);
-  const list = names.map((n,i)=>`(${i+1}) ${n}`).join(', ');
-  return `${v.subject} containing all ${names.length} of these, each clearly visible: ${list}. `
-       + `Every one of the ${names.length} must appear in the scene. ${v.style}. No text, no words, no letters, no signage.`;
+  const names = items.map(it => simplifyForPrompt(it.name)).filter(Boolean);
+  // Written as one flowing photographic description on purpose. A numbered
+  // list ("(1) x, (2) y") reads as a request for an annotated diagram, and
+  // the model answers with an infographic full of garbled callout labels —
+  // it cannot render text reliably. Natural phrasing keeps it a photograph.
+  const last = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length-1] : names[0];
+  return `${v.style}. A single photograph of ${v.subject} that features ${last}. `
+       + `Every one of these appears naturally within the scene. `
+       + `Plain photograph only: no text, no labels, no callouts, no captions, no numbers, no arrows, no infographic or diagram elements, no watermarks.`;
 }
 // Trim the wording down to the thing itself. Long descriptive names dilute the
 // prompt and the model starts ignoring later items.
@@ -1665,7 +1678,7 @@ const THEME_PACKS = [
   { key:'football', name:'Football',  emoji:'⚽', blurb:'squads & rivalries',
     themes:['football','rivals_clasico','rivals_manchester','rivals_milan','rivals_london'] },
   { key:'worlds',   name:'Big Ideas', emoji:'🏝️', blurb:'islands, houses, powers',
-    themes:['island','house','superhero'] }
+    themes:['island','house','bedroom','superhero'] }
 ];
 function allThemeMeta(key){
   if(CATEGORY_THEMES[key]) return CATEGORY_THEMES[key];
