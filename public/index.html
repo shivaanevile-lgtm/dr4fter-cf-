@@ -63,6 +63,14 @@
     font-size:clamp(46px,15vw,68px); line-height:.86;
     letter-spacing:.012em; margin:0; color:var(--chalk);
     text-transform:uppercase;
+    animation:mastheadWobble .8s cubic-bezier(.34,1.56,.64,1) .1s both;
+  }
+  @keyframes mastheadWobble{
+    0%{ transform:rotate(0deg) scale(1); }
+    30%{ transform:rotate(-3deg) scale(1.03); }
+    55%{ transform:rotate(2.5deg) scale(1.01); }
+    75%{ transform:rotate(-1.2deg) scale(1.005); }
+    100%{ transform:rotate(0deg) scale(1); }
   }
   .masthead .four{ color:var(--volt); }
   .masthead p{
@@ -131,8 +139,12 @@
   }
   .lot-card::before{
     content:''; position:absolute; top:0; left:0; right:0; height:4px;
-    background:linear-gradient(90deg,var(--volt),var(--gold));
+    background:linear-gradient(90deg,var(--mood-a,var(--volt)),var(--mood-b,var(--gold)));
   }
+  body[data-mood="food"]{ --mood-a:#FF6A18; --mood-b:#E8452C; }
+  body[data-mood="worlds"]{ --mood-a:#2E7BC4; --mood-b:#57C4D8; }
+  body[data-mood="football"]{ --mood-a:#2FA36B; --mood-b:#8CE05A; }
+  body[data-mood="media"]{ --mood-a:#A855D6; --mood-b:#E0499B; }
   .lot-no{
     position:absolute; top:12px; left:14px;
     font-family:var(--num); font-size:10px; font-variant-numeric:tabular-nums;
@@ -182,15 +194,45 @@
 
   /* ---- SOLD stamp ---- */
   .sold-stamp{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:3; }
-  .sold-stamp span{
+  .sold-stamp.style-classic span{
     font-family:var(--display); font-size:52px; letter-spacing:.1em;
     text-transform:uppercase; color:var(--stamp);
     border:5px solid var(--stamp); padding:4px 20px 6px; border-radius:6px;
     transform:rotate(-13deg) scale(2.4); opacity:0;
     animation:stampIn .4s cubic-bezier(.2,1.5,.4,1) forwards;
   }
-  .sold-stamp.free span{ color:var(--mint); border-color:var(--mint); }
-  .sold-stamp.steal span{ color:var(--gold); border-color:var(--gold); }
+  .sold-stamp.style-classic.free span{ color:var(--mint); border-color:var(--mint); }
+  .sold-stamp.style-classic.steal span{ color:var(--gold); border-color:var(--gold); }
+
+  /* Food themes: a torn paper receipt, "PAID" punched through */
+  .receipt-tag{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:#F7F3E8; color:#1a1a1a; padding:10px 26px 12px;
+    font-family:var(--num); transform:rotate(-6deg) scale(1.7); opacity:0;
+    box-shadow:0 6px 16px rgba(0,0,0,.35);
+    clip-path:polygon(0% 8%,6% 0%,12% 8%,18% 0%,24% 8%,30% 0%,36% 8%,42% 0%,48% 8%,
+      54% 0%,60% 8%,66% 0%,72% 8%,78% 0%,84% 8%,90% 0%,96% 8%,100% 0%,
+      100% 92%,94% 100%,88% 92%,82% 100%,76% 92%,70% 100%,64% 92%,58% 100%,
+      52% 92%,46% 100%,40% 92%,34% 100%,28% 92%,22% 100%,16% 92%,10% 100%,4% 92%,0% 100%);
+    animation:stampIn .4s cubic-bezier(.2,1.5,.4,1) forwards;
+  }
+  .receipt-tag b{ font-size:20px; letter-spacing:.25em; }
+  .receipt-tag i{ font-style:normal; font-size:14px; opacity:.75; }
+  .sold-stamp.style-receipt.free .receipt-tag b{ color:var(--mint); }
+  .sold-stamp.style-receipt.steal .receipt-tag b{ color:var(--gold); }
+
+  /* House / Bedroom / Island: a wax-seal property deed */
+  .deed-tag{
+    display:inline-block; font-family:var(--display); font-size:22px;
+    text-transform:uppercase; letter-spacing:.08em; text-align:center;
+    color:var(--gold); background:rgba(11,28,54,.94);
+    border:3px double var(--gold); border-radius:4px; padding:12px 18px;
+    transform:rotate(-8deg) scale(1.9); opacity:0; max-width:260px; line-height:1.25;
+    box-shadow:0 0 0 1px rgba(0,0,0,.4), 0 8px 20px rgba(0,0,0,.4);
+    animation:stampIn .4s cubic-bezier(.2,1.5,.4,1) forwards;
+  }
+  .sold-stamp.style-deed.free .deed-tag{ color:var(--mint); border-color:var(--mint); }
+  .sold-stamp.style-deed.steal .deed-tag{ color:var(--gold); }
   @keyframes stampIn{
     0%{ transform:rotate(-28deg) scale(2.6); opacity:0; }
     55%{ transform:rotate(-13deg) scale(.94); opacity:1; }
@@ -223,7 +265,11 @@
   .player-card .item-row .iprice{ font-family:var(--num); color:var(--chalk-soft); flex:0 0 auto; }
   .player-card .empty-note{ font-size:12.5px; color:var(--chalk-soft); font-style:italic; padding:var(--s2) 0; }
   .budget-track{ height:5px; background:var(--deck-2); border-radius:3px; overflow:hidden; margin-top:var(--s2); }
-  .budget-fill{ height:100%; background:linear-gradient(90deg,var(--volt),var(--gold)); border-radius:3px; transition:width .35s ease; }
+  .budget-fill{ height:100%; border-radius:3px; transition:width .35s ease, background .35s ease; }
+  .budget-fill.tier-full{ background:linear-gradient(90deg,var(--mint),#3fe0a0); }
+  .budget-fill.tier-mid{ background:linear-gradient(90deg,var(--volt),var(--gold)); }
+  .budget-fill.tier-low{ background:linear-gradient(90deg,var(--gold),var(--stamp)); }
+  .budget-fill.tier-broke{ background:var(--stamp); }
   .pick-count{ font-family:var(--num); font-size:11.5px; color:var(--chalk-soft); }
 
   /* ---- theme + opponent chips ---- */
@@ -1699,8 +1745,22 @@ function buzzOutbid(){ buzz(70); }
 function buzzWon(){ buzz([25,45,25]); }
 
 /* ============ CONFETTI (DOM/CSS, no library) ============ */
-function confettiBurst(){
-  const colors=['#FF6A18','#FFC53D','#4c7a5a','#0B1C36','var(--deck-2)'];
+function confettiBurst(itemName){
+  let colors = ['#FF6A18','#FFC53D','#4c7a5a','#0B1C36','var(--deck-2)'];
+  let matched = false;
+  // a football player: use their actual club kit colours
+  if(itemName && typeof clubOf === 'function'){
+    const club = clubOf(itemName);
+    if(club && typeof kitFor === 'function'){
+      const kit = kitFor(itemName);
+      if(kit){ colors = [kit[0], kit[1], kit[0], kit[1], '#0B1C36']; matched = true; }
+    }
+  }
+  // otherwise, the current theme's decorative mood palette
+  if(!matched){
+    const mood = document.body.dataset.mood;
+    if(mood && MOOD_PALETTE[mood]) colors = MOOD_PALETTE[mood];
+  }
   for(let i=0;i<40;i++){
     const p = document.createElement('div');
     p.className='confetti-piece';
@@ -2214,6 +2274,7 @@ function renderRoomState(room){
 
 /* ============ PRACTICE MODE ENGINE ============ */
 function startLocalGame(nick1, nick2){
+  setBodyMood(App.themeKey);
   const theme = currentThemeObj();
   const catKey = theme.categoryTheme || null;
   const P = {
@@ -2252,6 +2313,7 @@ function startLocalGame(nick1, nick2){
 }
 
 function startPracticeGame(){
+  setBodyMood(App.themeKey);
   const theme = currentThemeObj();
   const catKey = theme.categoryTheme || null;
   const P = {
@@ -2427,7 +2489,7 @@ function resolveLotWinner(P, winnerIdx, amount){
   setTimeout(()=>showItemWonToast(player.nick, lotName, amount), 260);
   let delay;
   if(amount<=2){
-    setTimeout(()=>{ sndCoin(); confettiBurst(); }, 260);
+    setTimeout(()=>{ sndCoin(); confettiBurst(lotName); }, 260);
     delay = 1700;
   } else {
     delay = 1300;
@@ -2438,6 +2500,39 @@ function resolveLotWinner(P, winnerIdx, amount){
 }
 // Slam a SOLD stamp over the lot card. Colour matches the toast: green for a
 // free claim, gold for a bargain, stamp-red otherwise.
+// Which theme is actually live right now, regardless of mode — used to pick
+// the right stamp style below.
+// Which decorative "mood" a theme belongs to — used for the lot-card stripe
+// and confetti colour. Purely cosmetic, so it's kept separate from --volt
+// (which dozens of buttons/text rely on for contrast) rather than swapping
+// the whole palette per theme.
+const THEME_MOOD = {};
+['sandwich','pizza','fruit','dinner','snackbowl','candybowl'].forEach(k=>THEME_MOOD[k]='food');
+['island','house','bedroom','world','superhero','bunker','vacation','perfectlife'].forEach(k=>THEME_MOOD[k]='worlds');
+['football','rivals_clasico','rivals_manchester','rivals_milan','rivals_london'].forEach(k=>THEME_MOOD[k]='football');
+['movie','movies','tvshows','music','videogames'].forEach(k=>THEME_MOOD[k]='media');
+const MOOD_PALETTE = {
+  food:    ['#FF6A18','#FFC53D','#E8452C','#F7F3E8'],
+  worlds:  ['#2E7BC4','#57C4D8','#1B3A6B','#F2F0E9'],
+  football:['#2FA36B','#8CE05A','#1A5C3A','#F2F0E9'],
+  media:   ['#A855D6','#E0499B','#5B2C8C','#F2F0E9']
+};
+function setBodyMood(themeKey){
+  try{ document.body.dataset.mood = THEME_MOOD[themeKey] || ''; }catch(e){}
+}
+
+function currentThemeKeyForStamp(){
+  if(App.mode==='online') return App.lastRoom ? App.lastRoom.theme.key : null;
+  return App.themeKey;
+}
+const FOOD_STAMP_THEMES = ['sandwich','pizza','fruit','dinner','snackbowl','candybowl'];
+const DEED_STAMP_THEMES = ['house','bedroom','island'];
+function stampStyleFor(themeKey){
+  if(FOOD_STAMP_THEMES.includes(themeKey)) return 'receipt';
+  if(DEED_STAMP_THEMES.includes(themeKey)) return 'deed';
+  return 'classic';
+}
+
 function playSoldStamp(amount){
   buzzWon();
   const card = $('lot-card');
@@ -2445,10 +2540,21 @@ function playSoldStamp(amount){
   const old = card.querySelector ? card.querySelector('.sold-stamp') : null;
   if(old && old.remove) old.remove();
   const kind = amount === 0 ? 'free' : (amount <= 2 ? 'steal' : '');
-  const word = amount === 0 ? 'Free' : 'Sold';
+  const style = stampStyleFor(currentThemeKeyForStamp());
   const el = document.createElement('div');
-  el.className = 'sold-stamp' + (kind ? ' ' + kind : '');
-  el.innerHTML = `<span>${word}</span>`;
+  el.className = 'sold-stamp style-' + style + (kind ? ' ' + kind : '');
+  if(style === 'receipt'){
+    // a torn paper receipt tag: "PAID" punched through, price underneath
+    const word = amount === 0 ? 'FREE' : 'PAID';
+    el.innerHTML = `<span class="receipt-tag"><b>${word}</b><i>${amount===0?'\u00A0':'$'+amount}</i></span>`;
+  } else if(style === 'deed'){
+    // a wax-seal property deed: "DEED TRANSFERRED"
+    const word = amount === 0 ? 'GIFTED' : 'DEED TRANSFERRED';
+    el.innerHTML = `<span class="deed-tag">${word}</span>`;
+  } else {
+    const word = amount === 0 ? 'Free' : 'Sold';
+    el.innerHTML = `<span>${word}</span>`;
+  }
   card.appendChild(el);
   card.classList.add('resolving');
   setTimeout(()=>card.classList.remove('resolving'), 460);
@@ -3034,6 +3140,7 @@ function catShortLabel(catThemeKey, cat){
 function playerCardHTML(nick, budget, items, opts){
   opts = opts||{};
   const pct = Math.max(0, Math.min(100, (budget/20)*100));
+  const tier = pct===0 ? 'tier-broke' : pct<=20 ? 'tier-low' : pct<=50 ? 'tier-mid' : 'tier-full';
   const dot = opts.turnActive ? '<span class="turn-dot"></span>' : '';
   const rows = items.length
     ? items.map(it=>`<div class="item-row"><span class="iname">${it.cat?`<b>${escapeHtml(catShortLabel(opts.catThemeKey, it.cat))}:</b> `:''}${escapeHtml(it.name||'')}</span><span class="iprice">${it.paid===0?'FREE':(it.paid!=null?'$'+it.paid:'')}</span></div>`).join('')
@@ -3041,7 +3148,7 @@ function playerCardHTML(nick, budget, items, opts){
   return `<div class="player-card${opts.leading?' leading':''}">
     <div class="prow"><span class="pname">${dot}${escapeHtml(nick)}</span><span class="pbudget mono">$${budget}</span></div>
     <div class="psub">remaining · ${items.length}/5 items</div>
-    <div class="budget-track"><div class="budget-fill" style="width:${pct}%"></div></div>
+    <div class="budget-track"><div class="budget-fill ${tier}" style="width:${pct}%"></div></div>
     ${rows}
   </div>`;
 }
@@ -3107,6 +3214,7 @@ function renderTeamConsensusBanner(room, myTeam){
 function renderOnlineDraft(room){
   const g = room.game;
   if(!g){ return; }
+  setBodyMood(room.theme.key);
   const bidders = sidesOfClient(room);
 
   if(g.bidLog){
@@ -3117,7 +3225,7 @@ function renderOnlineDraft(room){
         if(!bidders[entry.player]) continue;
         showItemWonToast(sideLabelClient(room, entry.player), entry.name, entry.amount);
         sndGavel();
-        if(entry.amount<=2) setTimeout(()=>{ sndCoin(); confettiBurst(); }, 260);
+        if(entry.amount<=2) setTimeout(()=>{ sndCoin(); confettiBurst(entry.name); }, 260);
       }
       App.onlineBidLogSeen = g.bidLog.length;
     }
