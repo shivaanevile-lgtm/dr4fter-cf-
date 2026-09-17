@@ -2062,6 +2062,11 @@ function applyRoomIfNewest(seq, room){
 function enterLobby(room){
   showScreen('screen-lobby');
   $('lobby-code').textContent = room.code;
+  // A stale QR (and its cached content) from a previous room must never
+  // carry over — this is a brand new lobby, so start it closed and empty.
+  $('qr-wrap').classList.add('hidden');
+  $('qr-box').innerHTML = '';
+  $('btn-show-qr').textContent = '📱 Show QR code';
   $('lobby-plural').textContent = (room.hostMode==='3p' || room.hostMode==='2v2') ? 's' : '';
   $('lobby-role-note').textContent = App.role==='host' ? "You're hosting — you'll watch, not bid."
     : room.hostMode==='2v2' ? "You'll share a team with one other player — you both have to agree before a raise or pass goes through."
