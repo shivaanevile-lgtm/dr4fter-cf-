@@ -61,6 +61,63 @@ tvshows:{emoji:'📺',name:'Best TV Shows',items:[
  ['Stranger Things',6],['Seinfeld',6],['The Crown',5],['Better Call Saul',7],['Chernobyl',6],['Fargo',6],
  ['Succession',7],['The Bear',6],['True Detective',6],['Cheers',4],['Parks and Recreation',5],
  ['Curb Your Enthusiasm',5],['The West Wing',5],['Ted Lasso',5]]},
+bedroom:{emoji:'🛏️',name:'Build A Bedroom',items:[
+ ['A king-sized bed',9],['A full gaming setup',9],['A 75-inch TV',8],
+ ['A walk-in closet',8],['A private bathroom',8],['A sneaker wall',7],
+ ['A recliner chair',6],['A mini fridge',6],['LED strip lighting',5],
+ ['A balcony off the bedroom',8],['Blackout curtains',6],
+ ['A record player and vinyl shelf',6],['An ensuite with a rainfall shower',8],
+ ['A window seat with a view',7],['A desk with a triple monitor setup',7],
+ ['A projector and drop-down screen',7],['Soundproofed walls',6],
+ ['A hidden bookshelf door',7],['A hammock chair in the corner',5],
+ ['Heated floors',6],['A coffee station',5],['A pool table in the room',6],
+ ['A skylight over the bed',7],['A dartboard',4],['A beanbag corner',4],
+ ['A wall-length mirror',5],['A saltwater fish tank',7],['A neon sign',5]]},
+dinner:{emoji:'🍽️',name:'Build A Dinner',items:[
+ ['A ribeye steak, grilled',9],['Fresh sushi platter',8],['A whole roast chicken',7],
+ ['Fettuccine alfredo',6],['A rack of ribs',8],['Grilled salmon',7],
+ ['A loaded burger and fries',7],['Homemade lasagna',7],['Shrimp scampi',7],
+ ['A cheese and charcuterie board',6],['Garlic mashed potatoes',5],
+ ['Mac and cheese',6],['Caesar salad',4],['A dinner roll basket',3],
+ ['Grilled corn on the cob',4],['A bowl of tomato soup',3],
+ ['Fried chicken and waffles',8],['A margherita pizza',6],
+ ['Beef tacos',6],['A bacon-wrapped filet',9],['Chicken parmesan',6],
+ ['Buffalo wings',5],['Creme brulee for dessert',7],['A chocolate lava cake',7],
+ ['Sparkling water with lime',2],['A glass of red wine',4],
+ ['A basket of onion rings',4],['Grilled asparagus',3]]},
+world:{emoji:'🌍',name:'Build The Best World',items:[
+ ['Your own kingdom',9],['A wonder of the world',9],['An entire ocean',8],
+ ['Command of a global army',8],['Your own currency',7],
+ ['A seat on the world council',8],['An undiscovered island chain',7],
+ ['Control of the world\'s oil',8],['Your own language spoken everywhere',6],
+ ['A mountain range named after you',6],['The world\'s largest library',6],
+ ['A private space program',9],['Your own national holiday',5],
+ ['An army of dragons',9],['A monopoly on gold mining',8],
+ ['Your own royal bloodline',6],['The world\'s tallest tower',7],
+ ['Control of the internet',9],['A hidden underground city',7],
+ ['Your own time zone',4],['The world\'s best weather, always',6],
+ ['A fleet of warships',7],['Your own Olympic team that always wins',6],
+ ['The last untouched rainforest',7],['A seat at every negotiating table',6],
+ ['Your face on the currency',5],['An endless renewable energy source',8],
+ ['Your own national anthem',3]]},
+snackbowl:{emoji:'🍿',name:'Build A Snack Bowl',items:[
+ ['Oreos',7],['Doritos Cool Ranch',7],['Cheez-Its',6],['Sour Patch Kids',6],
+ ['Ritz crackers',4],['Pretzels',3],['Pringles',6],['M&Ms',6],
+ ['Goldfish crackers',5],['Popcorn, extra butter',6],['Skittles',6],
+ ['Trail mix',4],['Beef jerky',5],['Reese\'s Pieces',7],['Takis',7],
+ ['Wheat Thins',3],['Fruit snacks',3],['Chex Mix',5],['Rice Krispie treats',5],
+ ['Gummy bears',5],['Cheetos Flamin\' Hot',7],['Animal crackers',3],
+ ['Nutter Butters',6],['A giant chocolate chip cookie',7],['Combos',4],
+ ['Sun Chips',4],['Starburst',5],['A king-size candy bar',6]]},
+candybowl:{emoji:'🍬',name:'Build A Candy Bowl',items:[
+ ['Skittles',6],['Oreos',7],['M&Ms',6],['Reese\'s Peanut Butter Cups',8],
+ ['Sour Patch Kids',6],['Starburst',5],['Snickers',7],['Gummy bears',5],
+ ['Twix',7],['Kit Kat',6],['Hershey\'s Kisses',5],['Nerds',4],
+ ['Swedish Fish',5],['Jolly Ranchers',4],['Twizzlers',4],['Milky Way',6],
+ ['Airheads',4],['Butterfinger',6],['Warheads',3],['Ring Pop',3],
+ ['Nerds Rope',5],['Caramel chews',4],['Rolos',5],['York Peppermint Patty',5],
+ ['Laffy Taffy',4],['A giant gummy worm',6],['Pixy Stix',3],
+ ['Whoppers, malted milk balls',4],['A full-size chocolate bar',7]]},
 house:{emoji:'🏰',name:'Build A House',items:[
  ['An entire castle as the house',9],['A 12-car parking garage full of supercars',9],
  ['A private jet and its own landing strip',10],['A pool with a waterfall',8],
@@ -618,7 +675,7 @@ function checkText(raw, label, maxLen){
 // knowing the subject. Shown as a badge on the theme chips.
 const THEME_LEVEL = {
   backyard:'easy', gaming:'easy', vacation:'easy', perfectlife:'easy', fruit:'easy',
-  house:'easy',
+  house:'easy', bedroom:'easy', dinner:'easy', snackbowl:'easy', candybowl:'easy', world:'medium',
   bunker:'medium', superhero:'medium', videogames:'medium',
   movies:'deep', tvshows:'deep', music:'deep',
   sandwich:'easy', pizza:'easy', island:'easy',
@@ -637,23 +694,44 @@ const VISUALISABLE = {
   gaming:   { subject:'a gaming room', style:'wide photo of a gaming setup room interior, LED lighting, realistic' },
   bunker:   { subject:'an underground bunker', style:'wide photo of an underground survival bunker interior, realistic' },
   island:   { subject:'a private island', style:'aerial photo of a small private island, tropical, realistic' },
+  house:    { subject:'a huge luxury estate', style:'wide exterior photo of a vast luxury mansion estate and its grounds, aerial drone view, golden hour, realistic' },
+  bedroom:  { subject:'a bedroom', style:'wide interior photo of a large modern bedroom, warm lighting, realistic' },
+  dinner:   { subject:'a dinner spread on a table', style:'overhead food photo of a full dinner table spread, restaurant quality, realistic' },
+  snackbowl:{ subject:'a snack bowl', style:'overhead food photo of a bowl piled with snacks, bright and colourful, realistic' },
+  candybowl:{ subject:'a bowl of candy', style:'overhead food photo of a bowl overflowing with colourful candy, bright and vibrant, realistic' },
   pizza:    { subject:'a pizza', style:'overhead food photo of a whole pizza on a wooden board, realistic' },
   sandwich: { subject:'a sandwich', style:'close-up food photo of a stacked sandwich cut in half, realistic' }
 };
-function canVisualise(themeKey){ return !!VISUALISABLE[themeKey]; }
+function canVisualise(themeKey, room){
+  if(VISUALISABLE[themeKey]) return true;
+  // A custom theme built in "kit out a place" mode describes a real space, so
+  // it can be pictured too — the subject is whatever the player typed.
+  return themeKey === 'custom' && !!customPlaceName(room);
+}
+// The typed subject, if this game is a custom PLACE (not a "rank the things" list).
+function customPlaceName(room){
+  const c = room ? (room.theme && room.theme.custom) : App.customTheme;
+  return (c && c.mode === 'space' && c.name) ? c.name : null;
+}
 // Builds the text prompt from the items someone actually drafted.
-function buildVisualPrompt(themeKey, items){
-  const v = VISUALISABLE[themeKey];
-  if(!v) return null;
-  // Image models latch onto the first concrete noun and drop the rest, so put
-  // the drafted items FIRST and number them — the style direction goes last,
-  // where it can't crowd them out.
-  const names = items
-    .map(it => simplifyForPrompt(it.name))
-    .filter(Boolean);
-  const list = names.map((n,i)=>`(${i+1}) ${n}`).join(', ');
-  return `${v.subject} containing all ${names.length} of these, each clearly visible: ${list}. `
-       + `Every one of the ${names.length} must appear in the scene. ${v.style}. No text, no words, no letters, no signage.`;
+function buildVisualPrompt(themeKey, items, room){
+  let v = VISUALISABLE[themeKey];
+  if(!v){
+    const place = customPlaceName(room);
+    if(!place) return null;
+    const p = place.trim().toLowerCase();
+    const article = /^[aeiou]/.test(p) ? 'an' : 'a';
+    v = { subject: `${article} ${p}`, style: `wide photo of ${article} ${p}, realistic, natural light` };
+  }
+  const names = items.map(it => simplifyForPrompt(it.name)).filter(Boolean);
+  // Written as one flowing photographic description on purpose. A numbered
+  // list ("(1) x, (2) y") reads as a request for an annotated diagram, and
+  // the model answers with an infographic full of garbled callout labels —
+  // it cannot render text reliably. Natural phrasing keeps it a photograph.
+  const last = names.length > 1 ? names.slice(0, -1).join(', ') + ' and ' + names[names.length-1] : names[0];
+  return `${v.style}. A single photograph of ${v.subject} that features ${last}. `
+       + `Every one of these appears naturally within the scene. `
+       + `Plain photograph only: no text, no labels, no callouts, no captions, no numbers, no arrows, no infographic or diagram elements, no watermarks.`;
 }
 // Trim the wording down to the thing itself. Long descriptive names dilute the
 // prompt and the model starts ignoring later items.
