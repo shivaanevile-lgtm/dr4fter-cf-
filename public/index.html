@@ -593,7 +593,7 @@
         <div class="diff-head">
           <span class="diff-name" id="diff-name">Medium</span>
         </div>
-        <input type="range" id="diff-slider" min="0" max="3" step="1" value="1">
+        <input type="range" id="diff-slider" min="0" max="3" step="0.01" value="1">
         <div class="diff-scale"><span>Easy</span><span>Medium</span><span>Hard</span><span>Extreme</span></div>
         <div class="diff-tag" id="diff-tag"></div>
       </div>
@@ -1938,8 +1938,14 @@ $('btn-join-room').onclick = ()=> goNickname('join');
 App.difficulty = 'medium';
 function renderOpponents(){
   const idx = AI_LEVELS.findIndex(l=>l.id===App.difficulty);
-  const lvl = AI_LEVELS[idx];
-  $('diff-slider').value = String(idx);
+  $('diff-slider').value = String(idx);   // used on load/reset — never mid-drag
+  renderOpponentLabel();
+}
+// Updates only the text/colour, never the slider's own value — so calling
+// this while the user is actively dragging can't fight their finger or make
+// the thumb visually jump.
+function renderOpponentLabel(){
+  const lvl = AI_LEVELS.find(l=>l.id===App.difficulty) || AI_LEVELS[1];
   $('diff-name').textContent = lvl.name;
   $('diff-tag').textContent = lvl.tag;
   $('diff-name').className = 'diff-name diff-' + lvl.id;
@@ -3880,10 +3886,16 @@ $('btn-use-custom-space').onclick  = ()=>useCustomTheme('space');
 $('btn-use-custom-things').onclick = ()=>useCustomTheme('things');
 renderThemeGrid();
 $('diff-slider').oninput = (e)=>{
-  App.difficulty = AI_LEVELS[parseInt(e.target.value,10)].id;
-  renderOpponents();
+  const idx = Math.max(0, Math.min(AI_LEVELS.length-1, Math.round(parseFloat(e.target.value))));
+  const nextId = AI_LEVELS[idx].id;
+  if(nextId !== App.difficulty){ App.difficulty = nextId; renderOpponentLabel(); }
 };
-$('diff-slider').onchange = ()=>sndClick();
+$('diff-slider').onchange = (e)=>{
+  // let go: settle the thumb cleanly onto whichever level it landed nearest
+  const idx = AI_LEVELS.findIndex(l=>l.id===App.difficulty);
+  e.target.value = String(idx);
+  sndClick();
+};
 renderOpponents();
 updateHomeForRematch();
 
