@@ -32,3 +32,17 @@ id = "dab78dec8d0f4c54b983855715c5d67f"
 # No API key: the binding is the auth.
 [ai]
 binding = "AI"
+
+# Real-time logs — this is what lets you (or me, via a screenshot) see the
+# actual server-side error the moment something goes wrong, instead of
+# guessing from a symptom on screen.
+[observability.logs]
+enabled = true
+head_sampling_rate = 1
+invocation_logs = true
+persist = true
+
+[observability.traces]
+enabled = false
+head_sampling_rate = 1
+persist = true
