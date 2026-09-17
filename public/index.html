@@ -324,14 +324,12 @@
     padding:var(--s5) var(--s4); max-width:420px; width:100%; }
   #local-setup-card h2{ font-family:var(--display); font-size:26px; text-transform:uppercase; }
 
-  #handoff-overlay{ position:fixed; inset:0; background:var(--deep); z-index:1700;
-    display:flex; align-items:center; justify-content:center; padding:18px; text-align:center; }
-  #handoff-card{ max-width:340px; }
-  .handoff-icon{ font-size:56px; margin-bottom:var(--s3); }
-  .handoff-name{ font-family:var(--display); font-size:38px; text-transform:uppercase;
-    color:var(--volt); margin-bottom:var(--s2); word-break:break-word; }
-  .handoff-sub{ color:var(--chalk-soft); font-size:14px; margin-bottom:var(--s5); }
-  #handoff-card .btn{ max-width:220px; margin:0 auto; }
+  #local-turn-banner{ text-align:center; font-family:var(--display); font-size:22px;
+    text-transform:uppercase; letter-spacing:.03em; color:var(--deep);
+    background:var(--volt); border-radius:12px; padding:12px 10px; margin-bottom:var(--s3);
+    box-shadow:0 3px 0 var(--volt-dark); animation:turnPulse .35s ease; }
+  #local-turn-name{ color:var(--deep); font-weight:700; }
+  @keyframes turnPulse{ 0%{ transform:scale(.94); opacity:.6; } 100%{ transform:scale(1); opacity:1; } }
 
   #editor-overlay{ position:fixed; inset:0; background:rgba(6,14,28,.86); z-index:1600;
     display:flex; align-items:flex-start; justify-content:center; padding:18px; overflow-y:auto; }
@@ -468,15 +466,6 @@
       <div id="local-setup-error" style="font-size:12px; color:var(--volt); margin-top:8px;"></div>
       <button class="btn btn-primary" id="btn-local-start">Start</button>
       <button class="btn btn-ghost" id="btn-local-cancel">cancel</button>
-    </div>
-  </div>
-
-  <div id="handoff-overlay" class="hidden">
-    <div id="handoff-card">
-      <div class="handoff-icon">🤝</div>
-      <div id="handoff-name" class="handoff-name">Player</div>
-      <div class="handoff-sub">Pass the phone over, then tap when ready</div>
-      <button class="btn btn-primary" id="btn-handoff-ready">I'm ready</button>
     </div>
   </div>
 
@@ -629,6 +618,7 @@
       <div class="bid-display" id="bid-display">$0</div>
       <div class="ticker" id="ticker"></div>
 
+      <div id="local-turn-banner" class="hidden">🎮 <span id="local-turn-name"></span>'s turn</div>
       <div id="team-consensus-banner" class="hidden">
         <div id="consensus-text"></div>
         <button class="btn btn-primary hidden" id="btn-agree-team" style="margin-top:6px;"></button>
@@ -2252,7 +2242,6 @@ function startLocalGame(nick1, nick2){
   }
   App.mode = 'local';
   App.practice = P;
-  App.localHandoffSeen = null;
   showScreen('screen-draft');
   drawNextLotPractice();
 }
@@ -2856,7 +2845,7 @@ function renderPracticeDraft(){
    rather than mid-render. ---- */
 function renderLocalDraft(P){
   const activeSide = P.mode==='contested' ? P.turn : (P.mode==='solo' ? P.soloPlayer : 0);
-  const turnKey = P.currentLot.name + '|' + P.currentBid + '|' + activeSide + '|' + P.mode;
+  const turnKey = P.currentLot.name+'|'+P.currentBid+'|'+activeSide+'|'+P.mode;
 
   renderStalls(P.players, P.mode==='contested'?P.currentBidder:(P.mode==='solo'?P.soloPlayer:null), P.mode==='contested'?P.turn:null, P.catThemeKey);
   $('lot-cat').textContent = P.currentLot.cat ? roleLabel(P.catThemeKey, P.currentLot.cat) : P.themeEmoji+' '+P.themeName;
@@ -2870,18 +2859,9 @@ function renderLocalDraft(P){
   $('waiting-turn').classList.add('hidden');
   hideBidControls();
 
-  const handoff = $('handoff-overlay');
-  if(App.localHandoffSeen !== turnKey){
-    $('handoff-name').textContent = P.players[activeSide].nick;
-    handoff.classList.remove('hidden');
-    $('btn-handoff-ready').onclick = ()=>{
-      App.localHandoffSeen = turnKey;
-      handoff.classList.add('hidden');
-      renderLocalDraft(P);
-    };
-    return;
-  }
-  handoff.classList.add('hidden');
+  // whose turn it is, front and centre — no blocking screen, just unmissable
+  $('local-turn-banner').classList.remove('hidden');
+  $('local-turn-name').textContent = P.players[activeSide].nick;
 
   if(P.mode==='contested'){
     $('status-line').textContent = `${P.players[activeSide].nick}'s turn — raise or pass`;
