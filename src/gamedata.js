@@ -144,7 +144,18 @@ music:{emoji:'🎤',name:'Best Music Artists',items:[
  ['The Beatles',9],['Beyoncé',8],['Michael Jackson',9],['Taylor Swift',8],['Kendrick Lamar',8],['Queen',8],
  ['Stevie Wonder',8],['Adele',6],['Prince',8],['Rihanna',6],['Radiohead',6],['Bob Dylan',7],
  ['Whitney Houston',7],['Kanye West',6],['Nirvana',6],['Fleetwood Mac',6],['Frank Ocean',5],['Daft Punk',5],
- ['Amy Winehouse',6],['The Rolling Stones',7]]}
+ ['Amy Winehouse',6],['The Rolling Stones',7]]},
+msvv:{emoji:'⚽',name:'MSVV Football Team',items:[
+ ['Shivaan',7],['Mihran',9],['Suveer',7],
+ ['Vedant',7],['Samvir',9],['Samarvir',8],
+ ['Kelvin',6],['Krishiv',6],['Aadit',7],
+ ['Medhaansh',7],['Kiyansh',8],['Arham',7],
+ ['Ayaan',6],['Katori',7],['Katyal',6],
+ ['Yuval',9],['Kayaan',8],['Raghav',6],
+ ['Siddhran',8],['Vihaan',9],['Viaan',6],
+ ['Garvit',8],['Saksham',8],['Hrehaan',6],
+ ['Jayaansh',9],['Jaskaran',9],['Vansh',9],
+ ['Ansh',8]],assignPositions:true}
 };
 
 const CUSTOM_ADJ = ['Vintage {T}','Luxury {T}','Limited-Edition {T}','Handcrafted {T}','Deluxe {T}','Rare {T}'];
