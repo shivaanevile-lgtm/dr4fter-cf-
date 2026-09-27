@@ -3,6 +3,13 @@
 // the edge cases already fixed) carries over exactly.
 import { THEMES, CATEGORY_THEMES, ITEM_BY_ID, checkText } from './gamedata.js';
 
+// Most themes get 3 re-rolls on an uncontested item before the 4th attempt
+// just hands it over. A theme can override this (MSVV: 1) with maxSkips.
+function maxSkipsFor(themeKey){
+  const t = THEMES[themeKey];
+  return (t && t.maxSkips) || 3;
+}
+
 function resultIdGen(){
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   let s = '';
@@ -251,7 +258,7 @@ function applyResolvedAction(room, sideIdx, type, amount){
     resolveLotWinner(room, sideIdx, amount);
   } else if (type === 'skip') {
     g.skipsUsed++;
-    if (g.skipsUsed >= 4) {
+    if (g.skipsUsed >= maxSkipsFor(room.theme.key) + 1) {
       resolveLotWinner(room, sideIdx, bidders[sideIdx].budget === 0 ? 0 : 1);
     } else {
       const cat = g.currentLot.cat;
