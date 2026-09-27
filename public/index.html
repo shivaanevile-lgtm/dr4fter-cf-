@@ -340,14 +340,16 @@
   .duel-side.won{ color:var(--chalk); font-weight:600; }
   .duel-mid{ font-size:10px; color:var(--chalk-soft); white-space:nowrap; }
   .duel-foot{ font-size:11.5px; color:var(--chalk-soft); margin-top:var(--s2); font-style:italic; }
+  /* ---- simulated match scoreline (FotMob-style) ---- */
+  .match-score{ display:flex; align-items:center; justify-content:center; gap:var(--s3); padding:var(--s2) 0 var(--s3); text-align:center; }
+  .match-score .ms-team{ flex:1; font-size:13px; font-weight:600; color:var(--chalk); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .match-score .ms-num{ font-family:var(--display); font-size:26px; color:var(--volt); letter-spacing:.02em; flex:0 0 auto; }
+  .match-scorers{ display:flex; gap:var(--s3); border-top:1px solid var(--line); padding-top:var(--s2); }
+  .ms-col{ flex:1; font-size:12px; line-height:1.7; color:var(--chalk-soft); }
+  .ms-col.right{ text-align:right; }
+  .ms-none{ opacity:.6; font-style:italic; }
   .pitch-wrap{ display:flex; gap:var(--s2); margin-bottom:var(--s4); }
-  .pitch-wrap.assign{ align-items:flex-start; }
   .pitch-col{ flex:1; text-align:center; font-size:11.5px; color:var(--chalk-soft); }
-  .pos-picker{ text-align:left; }
-  .pos-hint{ font-size:10.5px; color:var(--chalk-soft); font-style:italic; margin-bottom:6px; }
-  .pos-row{ display:flex; align-items:center; justify-content:space-between; gap:6px; padding:4px 0; border-bottom:1px solid var(--line-soft); }
-  .pos-name{ font-size:12px; color:var(--chalk); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
-  .pos-select{ font-size:11px; padding:3px 4px; border-radius:6px; border:1px solid var(--line); background:var(--deck-2); color:var(--chalk); flex:0 0 auto; }
   .pick-row{
     display:flex; justify-content:space-between; align-items:center; gap:var(--s2);
     padding:11px var(--s3); background:var(--deck-2);
@@ -446,6 +448,21 @@
   .free-toast.show.variant-sold{ animation:none; }
   .free-toast.show.variant-joined{ animation:none; }
   @keyframes toastPop{ 0%{transform:translate(-50%,0) scale(.82);} 60%{transform:translate(-50%,0) scale(1.06);} 100%{transform:translate(-50%,0) scale(1);} }
+  /* ---- immediate position-placement prompt (MSVV-style themes) ---- */
+  .pos-prompt{
+    position:fixed; left:50%; bottom:14%; transform:translate(-50%,10px);
+    background:var(--deck-2); color:var(--chalk); padding:var(--s3) var(--s4); border-radius:14px;
+    z-index:2001; opacity:0; pointer-events:none; transition:opacity .18s ease, transform .18s ease;
+    text-align:center; max-width:90vw; box-shadow:0 8px 24px rgba(0,0,0,.25);
+  }
+  .pos-prompt.show{ opacity:1; transform:translate(-50%,0); pointer-events:auto; }
+  .pos-prompt-head{ font-size:13px; font-weight:700; margin-bottom:8px; }
+  .pos-prompt-btns{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
+  .pos-prompt-btns button{
+    font-size:12px; font-weight:600; padding:7px 12px; border-radius:8px;
+    border:1px solid var(--line); background:var(--deck); color:var(--chalk); cursor:pointer;
+  }
+  .pos-prompt-btns button:active{ transform:translateY(1px); background:var(--volt); color:#12213B; }
   .confetti-piece{ position:fixed; width:9px; height:14px; z-index:1999; pointer-events:none; }
 
   /* ---- debug console ---- */
@@ -927,16 +944,17 @@ music:{emoji:'🎤',name:'Best Music Artists',items:[
  ['Whitney Houston',7],['Kanye West',6],['Nirvana',6],['Fleetwood Mac',6],['Frank Ocean',5],['Daft Punk',5],
  ['Amy Winehouse',6],['The Rolling Stones',7]]},
 msvv:{emoji:'⚽',name:'MSVV Football Team',items:[
- ['Shivaan',7],['Mihran',9],['Suveer',7],
- ['Vedant',7],['Samvir',9],['Samarvir',8],
- ['Kelvin',6],['Krishiv',6],['Aadit',7],
- ['Medhaansh',7],['Kiyansh',8],['Arham',7],
- ['Ayaan',6],['Katori',7],['Katyal',6],
- ['Yuval',9],['Kayaan',8],['Raghav',6],
- ['Siddhran',8],['Vihaan',9],['Viaan',6],
- ['Garvit',8],['Saksham',8],['Hrehaan',6],
- ['Jayaansh',9],['Jaskaran',9],['Vansh',9],
- ['Ansh',8]],assignPositions:true}
+ ['Shivaan',5],['Mihran',5],['Suveer',5],
+ ['Vedant',5],['Samvir',5],['Samarvir',5],
+ ['Kelvin',5],['Krishiv',5],['Aadit',5],
+ ['Medhaansh',5],['Kiyansh',5],['Arham',5],
+ ['Ayaan',5],['Katori',5],['Katyal',5],
+ ['Yuval',5],['Kayaan',5],['Raghav',5],
+ ['Siddhran',5],['Vihaan',5],['Viaan',5],
+ ['Garvit',5],['Saksham',5],['Hrehaan',5],
+ ['Jayaansh',5],['Jaskaran',5],['Vansh',5],
+ ['Ansh',5]
+],assignPositions:true,hideRatings:true,maxSkips:1}
 };
 
 const CUSTOM_ADJ = ['Vintage {T}','Luxury {T}','Limited-Edition {T}','Handcrafted {T}','Deluxe {T}','Rare {T}'];
@@ -1735,6 +1753,9 @@ function setLotNumber(lot, themeKey){
   el.textContent = id ? 'Lot ' + String(id).padStart(3,'0') : '';
 }
 function stars(r){ const full=Math.round(r/2); return '★'.repeat(full)+'☆'.repeat(5-full)+' ('+r+'/10)'; }
+// Some themes (MSVV: real people, no one gets rated) carry no visible rating
+// at all — used to blank out the star display, jersey number, and share text.
+function themeHidesRatings(themeKey){ const t = THEMES[themeKey]; return !!(t && t.hideRatings); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ============ SOUND (Web Audio, synthesized) ============ */
@@ -2332,6 +2353,7 @@ function startLocalGame(nick1, nick2){
   }
   App.mode = 'local';
   App.practice = P;
+  App.posChoices = {};
   showScreen('screen-draft');
   drawNextLotPractice();
 }
@@ -2373,6 +2395,7 @@ function startPracticeGame(){
   }
   App.mode = 'practice';
   App.practice = P;
+  App.posChoices = {};
   showScreen('screen-draft');
   $('host-watch-note').classList.add('hidden');
   drawNextLotPractice();
@@ -2508,6 +2531,16 @@ function resolveLotWinner(P, winnerIdx, amount){
   const rec = {name:lotName, r:P.currentLot.r, cat:P.currentLot.cat, paid:amount};
   player.items.push(rec);
   P.bidLog.push({player:winnerIdx, name:lotName, amount, cat:P.currentLot.cat});
+  // Themes with no pre-decided positions (MSVV): place this win right now.
+  // In practice mode the AI doesn't need asking — it's silently lined up in
+  // a sensible order so its own pitch still fills in at the results screen.
+  if(!P.catThemeKey && themeUsesImmediatePlacement(App.themeKey)){
+    if(App.mode==='practice' && winnerIdx===1){
+      rec.cat = POS_DEFAULT_5[player.items.length-1] || 'MID';
+    } else {
+      promptForPosition(player.nick, lotName, (pos)=>{ rec.cat = pos; });
+    }
+  }
   recordHumanBidToServer(winnerIdx, P);
   sndGavel();
   setTimeout(()=>showItemWonToast(player.nick, lotName, amount), 260);
@@ -2676,14 +2709,14 @@ function humanSkip(){
   const P = App.practice;
   if(P.mode!=='solo') return;
   P.skipsUsed++;
-  if(P.skipsUsed>=4){
+  if(P.skipsUsed>=maxSkipsFor(App.themeKey)+1){
     // 4th attempt: auto-given the CURRENT (not a new) candidate
     resolveLotWinner(P, P.soloPlayer, P.players[P.soloPlayer].budget===0?0:1);
     return;
   }
   const passedOver = P.currentLot;
   const cand = P.catThemeKey ? drawCategoryCandidate(P, P.currentLot.cat) : P.itemPool.shift();
-  if(!cand){ P.skipsUsed=4; return humanSkip(); }
+  if(!cand){ P.skipsUsed=maxSkipsFor(App.themeKey)+1; return humanSkip(); }
   // recycle the passed-over item to the back so skipping never shrinks the pool
   (P.catThemeKey ? P.candidates : P.itemPool).push([passedOver.name, passedOver.r]);
   P.currentLot = {name:cand[0], r:cand[1], cat:P.currentLot.cat};
@@ -2925,7 +2958,7 @@ function renderPracticeDraft(){
   $('lot-cat').textContent = P.currentLot.cat ? roleLabel(P.catThemeKey, P.currentLot.cat) : P.themeEmoji+' '+P.themeName;
   $('lot-name').textContent = P.currentLot.name;
   const ovrP = ovrFor(P.currentLot.name);
-  $('lot-stars').innerHTML = stars(P.currentLot.r) +
+  $('lot-stars').innerHTML = themeHidesRatings(App.themeKey) ? '' : stars(P.currentLot.r) +
     (ovrP ? ` <span class="ovr-badge${isOfficialOvr(P.currentLot.name)?'':' unofficial'}">${ovrP}</span>` : '');
   setLotNumber(P.currentLot, App.themeKey);
 
@@ -2963,7 +2996,7 @@ function renderPracticeDraft(){
         freeClaim: ()=>humanClaim(0),
         lotKey: P.currentLot.name,
         primaryLabel: 'Claim',
-        secondaryLabel: `Skip it (${3-P.skipsUsed} left)`,
+        secondaryLabel: `Skip it (${maxSkipsFor(App.themeKey)-P.skipsUsed} left)`,
         onPrimary: (amt)=>{ sndClick(); humanClaim(amt); },
         onSecondary: ()=>{ sndClick(); humanSkip(); }
       });
@@ -2986,7 +3019,7 @@ function renderLocalDraft(P){
   $('lot-cat').textContent = P.currentLot.cat ? roleLabel(P.catThemeKey, P.currentLot.cat) : P.themeEmoji+' '+P.themeName;
   $('lot-name').textContent = P.currentLot.name;
   const ovrP = ovrFor(P.currentLot.name);
-  $('lot-stars').innerHTML = stars(P.currentLot.r) +
+  $('lot-stars').innerHTML = themeHidesRatings(App.themeKey) ? '' : stars(P.currentLot.r) +
     (ovrP ? ` <span class="ovr-badge${isOfficialOvr(P.currentLot.name)?'':' unofficial'}">${ovrP}</span>` : '');
   setLotNumber(P.currentLot, App.themeKey);
   $('bid-display').innerHTML = '$'+P.currentBid + (P.currentBidder!==null ? `<span class="by">— currently held by ${escapeHtml(P.players[P.currentBidder].nick)}</span>` : '');
@@ -3022,7 +3055,7 @@ function renderLocalDraft(P){
       freeClaim: ()=>humanClaim(0),
       lotKey: turnKey,
       primaryLabel: 'Claim',
-      secondaryLabel: `Skip it (${3-P.skipsUsed} left)`,
+      secondaryLabel: `Skip it (${maxSkipsFor(App.themeKey)-P.skipsUsed} left)`,
       onPrimary: (amt)=>{ sndClick(); humanClaim(amt); },
       onSecondary: ()=>{ sndClick(); humanSkip(); }
     });
@@ -3241,21 +3274,30 @@ function renderOnlineDraft(room){
   setBodyMood(room.theme.key);
   const bidders = sidesOfClient(room);
 
+  // A brand new game (rematch) must never carry over stale position choices
+  // from the last one — msvv reuses the same fixed name pool every time.
+  if(App.lastSeenGameId !== g.gameId){ App.lastSeenGameId = g.gameId; App.outbidCount = 0; App.posChoices = {}; }
+
   if(g.bidLog){
     if(App.onlineBidLogSeen===undefined || g.bidLog.length<App.onlineBidLogSeen) App.onlineBidLogSeen = 0;
     if(g.bidLog.length>App.onlineBidLogSeen){
+      const myIdx = mySideIndexClient(room);
+      const wantsPlacement = !CATEGORY_THEMES[room.theme.key] && themeUsesImmediatePlacement(room.theme.key);
       for(let i=App.onlineBidLogSeen;i<g.bidLog.length;i++){
         const entry = g.bidLog[i];
         if(!bidders[entry.player]) continue;
         showItemWonToast(sideLabelClient(room, entry.player), entry.name, entry.amount);
         sndGavel();
         if(entry.amount<=2) setTimeout(()=>{ sndCoin(); confettiBurst(entry.name); }, 260);
+        // Only prompt for OUR OWN side's win — an opponent's placement
+        // choice is theirs to make on their own screen, never synced here.
+        if(wantsPlacement && entry.player===myIdx){
+          promptForPosition(sideLabelClient(room, entry.player), entry.name, (pos)=>{ App.posChoices[entry.name] = pos; });
+        }
       }
       App.onlineBidLogSeen = g.bidLog.length;
     }
   }
-
-  if(App.lastSeenGameId !== g.gameId){ App.lastSeenGameId = g.gameId; App.outbidCount = 0; }
 
   // someone just took the lead away from us
   const holder = g.currentBidderIdx;
@@ -3271,9 +3313,9 @@ function renderOnlineDraft(room){
   const displaySides = room.hostMode==='2v2'
     ? room.teams.map((t,i)=>({
         nick: `${i===0?'Team A':'Team B'} (${room.players.filter(p=>p.team===i).map(p=>p.nickname).join(' & ')})`,
-        budget: t.budget, items: t.items
+        budget: t.budget, items: withPosChoices(t.items)
       }))
-    : bidders.map(p=>({nick:p.nickname, budget:p.budget, items:p.items}));
+    : bidders.map(p=>({nick:p.nickname, budget:p.budget, items:withPosChoices(p.items)}));
   renderStalls(displaySides, g.currentBidderIdx, g.mode==='contested'?g.turnIdx:null, room.theme.key);
   renderChat('draft-chat', room);
 
@@ -3320,7 +3362,7 @@ function renderOnlineDraft(room){
   $('lot-cat').textContent = g.currentLot.cat ? roleLabel(room.theme.key, g.currentLot.cat) : (room.theme.emoji||'🎯')+' '+room.theme.name;
   $('lot-name').textContent = g.currentLot.name;
   const ovrG = ovrFor(g.currentLot.name);
-  $('lot-stars').innerHTML = stars(g.currentLot.r) +
+  $('lot-stars').innerHTML = themeHidesRatings(room.theme.key) ? '' : stars(g.currentLot.r) +
     (ovrG ? ` <span class="ovr-badge${isOfficialOvr(g.currentLot.name)?'':' unofficial'}">${ovrG}</span>` : '');
   setLotNumber(g.currentLot, room.theme.key);
   $('bid-display').innerHTML = '$'+g.currentBid + (g.currentBidderIdx!==null && g.currentBidderIdx!==undefined ? `<span class="by">— currently held by ${escapeHtml(sideLabelClient(room, g.currentBidderIdx))}</span>` : '');
@@ -3370,7 +3412,7 @@ function renderOnlineDraft(room){
         freeClaim: ()=>onlineAction('claim',{amount:0}),
         lotKey: g.currentLot.name,
         primaryLabel: 'Claim',
-        secondaryLabel: canSkip ? `Skip it (${3-(g.skipsUsed||0)} left)` : '',
+        secondaryLabel: canSkip ? `Skip it (${maxSkipsFor(room.theme.key)-(g.skipsUsed||0)} left)` : '',
         onPrimary: (amt)=>onlineAction('claim',{amount:amt}),
         onSecondary: canSkip ? ()=>onlineAction('skip',{}) : ()=>{}
       });
@@ -3411,10 +3453,11 @@ function renderHostPicker(room){
   if(!opts.length){ list.innerHTML = '<div class="waiting-note">Loading options…</div>'; return; }
   const tk = room.theme.key;
   const sorted = opts.slice().sort((a,b)=>(itemIdFor(a.name,tk)||0)-(itemIdFor(b.name,tk)||0));
+  const hideR = themeHidesRatings(tk);
   list.innerHTML = `<div class="pick-count">${sorted.length} still available — tap one to put it up</div>` +
     sorted.map(o=>`<div class="pick-row" data-name="${escapeHtml(o.name)}">
       <span class="pname"><span class="pid">#${itemIdFor(o.name,tk)||'?'}</span>${escapeHtml(o.name)}</span>
-      <span class="prate">${o.r}/10</span></div>`).join('');
+      <span class="prate">${hideR ? '' : o.r+'/10'}</span></div>`).join('');
   list.querySelectorAll('.pick-row').forEach(el=>{
     el.onclick = ()=>{
       if(App.onlineActionInFlight) return;
@@ -3641,39 +3684,39 @@ function resultViewFor(themeKey){
   const ct = CATEGORY_THEMES[themeKey];
   if(ct && ct.resultView) return ct.resultView;
   const t = THEMES[themeKey];
-  if(t && t.assignPositions) return 'pitch-assign';
+  // Positions are chosen the moment you win the item now (see
+  // promptForPosition), so by the time we're on the results screen an
+  // assignPositions theme's items already carry .cat — same pitch view as
+  // the pre-slotted football draft, just with (possibly) hidden ratings.
+  if(t && t.assignPositions) return 'pitch';
   return 'list';
 }
 function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
   showScreen('screen-results');
-  const j = judgeGame(itemsArr, opts.catThemeKey);
+  // Football-flavored themes (football, the rivalry drafts, MSVV) are
+  // decided by an actual simulated match instead of comparing averages —
+  // seeded so every viewer of this same game sees the identical scoreline.
+  let matchResult = null;
+  if(resultView==='pitch' && itemsArr.length===2 && itemsArr[0].length && itemsArr[1].length){
+    const simSeed = opts.resultKey || opts.shareUrl ||
+      (nicks.join('|') + itemsArr.map(arr=>arr.map(x=>x.name).join(',')).join('|'));
+    matchResult = simulateMatch(withPosChoices(itemsArr[0]), withPosChoices(itemsArr[1]), simSeed);
+  }
+  const j = matchResult ? { winner: matchResult.winner, headToHead:false } : judgeGame(itemsArr, opts.catThemeKey);
   $('results-title').textContent = opts.themeLabel;
   $('results-subhead').textContent = '';
 
   const picksWrap = $('picks-wrap'); picksWrap.innerHTML='';
   $('pitches-wrap').innerHTML='';
   nicks.forEach((n,i)=>{
-    picksWrap.innerHTML += playerCardHTML(n, budgets[i], itemsArr[i], {leading: j.winner===i, catThemeKey: opts.catThemeKey});
+    picksWrap.innerHTML += playerCardHTML(n, budgets[i], withPosChoices(itemsArr[i]), {leading: j.winner===i, catThemeKey: opts.catThemeKey});
   });
   if(resultView==='pitch'){
+    const hideR = themeHidesRatings(opts.themeKey);
     const pitchWrap = document.createElement('div'); pitchWrap.className='pitch-wrap';
     itemsArr.forEach((items,i)=>{
       const col = document.createElement('div'); col.className='pitch-col';
-      col.innerHTML = `<div style="font-weight:700; font-size:12px; margin-bottom:4px;">${escapeHtml(nicks[i])}</div>` + renderPitchSVG(items);
-      pitchWrap.appendChild(col);
-    });
-    $('pitches-wrap').appendChild(pitchWrap);
-  }
-  if(resultView==='pitch-assign'){
-    const pitchWrap = document.createElement('div'); pitchWrap.className='pitch-wrap assign';
-    itemsArr.forEach((items,i)=>{
-      const col = document.createElement('div'); col.className='pitch-col';
-      const head = document.createElement('div');
-      head.style.cssText = 'font-weight:700; font-size:12px; margin-bottom:4px;';
-      head.textContent = nicks[i];
-      col.appendChild(head);
-      if(items.length===5) col.appendChild(buildPositionPicker(items));
-      else col.innerHTML += `<div class="empty-note">Not enough players to line up yet</div>`;
+      col.innerHTML = `<div style="font-weight:700; font-size:12px; margin-bottom:4px;">${escapeHtml(nicks[i])}</div>` + renderPitchSVG(withPosChoices(items), hideR);
       pitchWrap.appendChild(col);
     });
     $('pitches-wrap').appendChild(pitchWrap);
@@ -3682,34 +3725,43 @@ function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
   const flavorWrap = $('flavor-wrap'); flavorWrap.innerHTML='';
   const pillLabel = j.winner===null ? "It's a tie" : `${nicks[j.winner]} wins`;
   const pillClass = j.winner===null ? 'pill tie' : 'pill';
-  const paragraph = buildJudgmentParagraph(nicks, itemsArr, budgets, bidLog, j);
-  let duelHTML = '';
-  if(j.headToHead){
-    const rows = j.duels.map(d=>{
-      const an = d.a ? d.a.name : '—', bn = d.b ? d.b.name : '—';
-      const mark = w => w===null ? '<span style="color:var(--chalk-soft);">draw</span>'
-        : `<span style="color:var(--volt); font-weight:700;">${w===0?'◀':'▶'}</span>`;
-      return `<div class="duel-row">
-        <span class="duel-side${d.winner===0?' won':''}">${escapeHtml(an)} <b>${d.a?d.a.r:0}</b></span>
-        <span class="duel-mid">${catShortLabel(opts.catThemeKey, d.cat)} ${mark(d.winner)}</span>
-        <span class="duel-side right${d.winner===1?' won':''}"><b>${d.b?d.b.r:0}</b> ${escapeHtml(bn)}</span>
-      </div>`;
-    }).join('');
-    duelHTML = `<div class="duel-head">Head-to-head &mdash; ${j.score[0]}&ndash;${j.score[1]}</div>${rows}
-      <div class="duel-foot">weighted rating ${j.weighted[0].toFixed(1)} vs ${j.weighted[1].toFixed(1)}
-      <span style="opacity:.7;">(attackers count more)</span></div>`;
+  let paragraph, bodyHTML;
+  if(matchResult){
+    paragraph = matchResult.winner===null
+      ? `Full time: ${nicks[0]} ${matchResult.score[0]} - ${matchResult.score[1]} ${nicks[1]}. Honours even.`
+      : `Full time: ${nicks[0]} ${matchResult.score[0]} - ${matchResult.score[1]} ${nicks[1]}.`;
+    bodyHTML = matchScoreCardHTML(nicks, matchResult);
+  } else {
+    paragraph = buildJudgmentParagraph(nicks, itemsArr, budgets, bidLog, j);
+    let duelHTML = '';
+    if(j.headToHead){
+      const rows = j.duels.map(d=>{
+        const an = d.a ? d.a.name : '—', bn = d.b ? d.b.name : '—';
+        const mark = w => w===null ? '<span style="color:var(--chalk-soft);">draw</span>'
+          : `<span style="color:var(--volt); font-weight:700;">${w===0?'◀':'▶'}</span>`;
+        return `<div class="duel-row">
+          <span class="duel-side${d.winner===0?' won':''}">${escapeHtml(an)} <b>${d.a?d.a.r:0}</b></span>
+          <span class="duel-mid">${catShortLabel(opts.catThemeKey, d.cat)} ${mark(d.winner)}</span>
+          <span class="duel-side right${d.winner===1?' won':''}"><b>${d.b?d.b.r:0}</b> ${escapeHtml(bn)}</span>
+        </div>`;
+      }).join('');
+      duelHTML = `<div class="duel-head">Head-to-head &mdash; ${j.score[0]}&ndash;${j.score[1]}</div>${rows}
+        <div class="duel-foot">weighted rating ${j.weighted[0].toFixed(1)} vs ${j.weighted[1].toFixed(1)}
+        <span style="opacity:.7;">(attackers count more)</span></div>`;
+    }
+    bodyHTML = `<div class="judgment-text">${escapeHtml(paragraph)}</div>${duelHTML}`;
   }
   const rivalry = opts.room ? rivalryLine(opts.room) : '';
   const card = document.createElement('div'); card.className='judgment-card';
-  card.innerHTML = `<div class="jhead"><h2 class="serif">Judgment</h2><span class="${pillClass}">${escapeHtml(pillLabel)}</span></div>
-    <div class="judgment-text">${escapeHtml(paragraph)}</div>${duelHTML}` +
+  card.innerHTML = `<div class="jhead"><h2 class="serif">${matchResult?'Full Time':'Judgment'}</h2><span class="${pillClass}">${escapeHtml(pillLabel)}</span></div>
+    ${bodyHTML}` +
     (rivalry ? `<div class="duel-foot" style="font-style:normal;">${rivalry}</div>` : '');
   flavorWrap.appendChild(card);
 
   // stash what the share/export needs
   App.lastResults = {
     themeLabel: opts.themeLabel, nicks, itemsArr, budgets,
-    catThemeKey: opts.catThemeKey, verdict: paragraph, shareUrl: opts.shareUrl || ''
+    catThemeKey: opts.catThemeKey, themeKey: opts.themeKey, verdict: paragraph, shareUrl: opts.shareUrl || ''
   };
 
   // record this result once (guarded so re-renders/polls don't double-count)
@@ -3792,7 +3844,7 @@ function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
 
 /* ============ SVG SOCCER PITCH ============ */
 function shortName(n){ const parts=n.split(' '); return parts.length>1 ? parts[parts.length-1] : n; }
-function renderPitchSVG(items){
+function renderPitchSVG(items, hideRating){
   const byCat = {GK:[],DEF:[],MID:[],ATT:[]};
   items.forEach(it=>{ if(byCat[it.cat]) byCat[it.cat].push(it); });
   const W=200,H=300;
@@ -3831,10 +3883,13 @@ function renderPitchSVG(items){
     svg += `<path d="${rSleeve}" fill="${secondary}" stroke="#1a1a1a" stroke-width="0.8"/>`;
     // collar
     svg += `<path d="M${x-4},${top+4} L${x},${top+8} L${x+4},${top+4}" fill="none" stroke="#1a1a1a" stroke-width="1"/>`;
-    // rating "number" on the shirt — dark text on light kits, light on dark
-    const lum = parseInt(primary.slice(1,3),16)*0.299 + parseInt(primary.slice(3,5),16)*0.587 + parseInt(primary.slice(5,7),16)*0.114;
-    svg += `<text x="${x}" y="${top+19}" font-size="10" font-weight="bold" text-anchor="middle"
-      font-family="Helvetica,Arial,sans-serif" fill="${lum>140?'#1a1a1a':'#ffffff'}">${item.r}</text>`;
+    // rating "number" on the shirt — dark text on light kits, light on dark.
+    // Some themes (real people, nobody rated) skip this entirely.
+    if(!hideRating){
+      const lum = parseInt(primary.slice(1,3),16)*0.299 + parseInt(primary.slice(3,5),16)*0.587 + parseInt(primary.slice(5,7),16)*0.114;
+      svg += `<text x="${x}" y="${top+19}" font-size="10" font-weight="bold" text-anchor="middle"
+        font-family="Helvetica,Arial,sans-serif" fill="${lum>140?'#1a1a1a':'#ffffff'}">${item.r}</text>`;
+    }
     // name plate under the shirt
     const nm = escapeHtml(shortName(item.name).slice(0,12));
     svg += `<rect x="${x-27}" y="${top+h+2}" width="54" height="11" rx="3" fill="rgba(20,20,20,0.55)"/>`;
@@ -3850,54 +3905,120 @@ function renderPitchSVG(items){
   return svg;
 }
 
-/* ============ POST-DRAFT POSITION PICKER (MSVV-style themes) ============ */
+/* ============ IMMEDIATE POSITION PLACEMENT (MSVV-style themes) ============ */
 // For flat (non-slotted) themes marked assignPositions:true, nobody's
-// position is decided during the draft — each player lines up their own
-// 5 winners afterwards, right here on the results screen. Purely cosmetic:
-// it never touches scoring (judgeGame ignores .cat for flat themes).
+// position is pre-decided by the draft — the moment you win an item, you're
+// asked where it plays. Purely cosmetic: it never touches scoring (judgeGame
+// ignores .cat for flat themes), and it's never sent to the server — it's
+// just a per-viewer overlay kept in App.posChoices.
 const POS_ORDER = ['GK','DEF','MID','ATT'];
 const POS_LABEL = {GK:'Goalkeeper', DEF:'Defender', MID:'Midfielder', ATT:'Attacker'};
-const POS_DEFAULT_5 = ['GK','DEF','MID','MID','ATT']; // a sensible 5-a-side starting shape
-function buildPositionPicker(items){
-  const wrap = document.createElement('div');
-  wrap.className = 'pos-picker';
-  const assigned = items.map((it,i)=> POS_DEFAULT_5[i] || 'MID');
-
-  const hint = document.createElement('div');
-  hint.className = 'pos-hint';
-  hint.textContent = "You're up — put your 5 wherever you want on the pitch.";
-  wrap.appendChild(hint);
-
-  const rowsHost = document.createElement('div');
-  items.forEach((it,i)=>{
-    const row = document.createElement('div');
-    row.className = 'pos-row';
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'pos-name';
-    nameSpan.textContent = it.name;
-    const sel = document.createElement('select');
-    sel.className = 'pos-select';
-    POS_ORDER.forEach(p=>{
-      const opt = document.createElement('option');
-      opt.value = p; opt.textContent = POS_LABEL[p];
-      if(assigned[i]===p) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    sel.onchange = ()=>{ assigned[i] = sel.value; redraw(); };
-    row.appendChild(nameSpan);
-    row.appendChild(sel);
-    rowsHost.appendChild(row);
+const POS_DEFAULT_5 = ['GK','DEF','MID','MID','ATT']; // a sensible 5-a-side starting shape, used to silently place an AI's or an unanswered pick
+function themeUsesImmediatePlacement(themeKey){ const t = THEMES[themeKey]; return !!(t && t.assignPositions); }
+// Most themes get 3 re-rolls on an uncontested item before the 4th attempt
+// just hands it over. A theme can override this (MSVV: 1) with maxSkips.
+function maxSkipsFor(themeKey){ const t = THEMES[themeKey]; return (t && t.maxSkips) || 3; }
+// Overlays a locally-chosen position onto items that don't already carry one
+// (an online opponent's own choice never reaches us — only our own side's
+// picks are stored here — so this only ever fills in OUR side's items).
+function withPosChoices(items){
+  if(!items || !App.posChoices) return items;
+  return items.map(it => (it.cat==null && App.posChoices[it.name]!=null)
+    ? Object.assign({}, it, {cat: App.posChoices[it.name]}) : it);
+}
+// A small non-blocking card, same footprint as showItemWonToast: pick a spot
+// for the player you just won. The game keeps moving while it's up.
+function promptForPosition(nick, itemName, onChoose){
+  const el = document.createElement('div');
+  el.className = 'pos-prompt';
+  el.innerHTML = `<div class="pos-prompt-head">📍 ${escapeHtml(nick)} — where does ${escapeHtml(itemName)} play?</div>
+    <div class="pos-prompt-btns">${POS_ORDER.map(p=>`<button data-p="${p}">${POS_LABEL[p]}</button>`).join('')}</div>`;
+  document.body.appendChild(el);
+  requestAnimationFrame(()=>el.classList.add('show'));
+  el.querySelectorAll('button').forEach(b=>{
+    b.onclick = ()=>{
+      sndClick();
+      el.classList.remove('show');
+      setTimeout(()=>el.remove(), 200);
+      onChoose(b.dataset.p);
+    };
   });
-  wrap.appendChild(rowsHost);
+}
 
-  const pitchHost = document.createElement('div');
-  wrap.appendChild(pitchHost);
-  function redraw(){
-    const withCats = items.map((it,i)=>Object.assign({}, it, {cat: assigned[i]}));
-    pitchHost.innerHTML = renderPitchSVG(withCats);
+/* ============ MATCH SIMULATION (football-flavored themes) ============ */
+// Replaces the plain average-rating "judgment" for football, the rivalry
+// drafts, and MSVV with an actual simulated match — a scoreline and
+// scorers, FotMob-style — instead of just comparing two averages.
+// Seeded so every viewer of the same game (online, or a saved /r/ link)
+// sees the identical result rather than each re-rolling their own.
+function seedFromString(s){
+  let h = 2166136261;
+  s = String(s);
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function mulberry32(seed){
+  let a = seed >>> 0;
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// Attack = ATT+MID average, defense = DEF+GK average. When every item shares
+// the same rating (MSVV: nobody's rated), attack and defense come out
+// identical for both sides — the match is decided purely by chance, exactly
+// as it should be for a game about friends, not a skill judgment.
+function teamStrength(items){
+  const by = {GK:[],DEF:[],MID:[],ATT:[]};
+  (items||[]).forEach(it=>{ if(by[it.cat]) by[it.cat].push(it); });
+  const avg = arr => arr.length ? arr.reduce((s,x)=>s+(x.r||5),0)/arr.length : 5;
+  return { attack: avg(by.ATT.concat(by.MID)), defense: avg(by.DEF.concat(by.GK)), byCat: by };
+}
+function pickScorer(byCat, rng){
+  const weighted = [];
+  (byCat.ATT||[]).forEach(it=>weighted.push([it,3]));
+  (byCat.MID||[]).forEach(it=>weighted.push([it,2]));
+  (byCat.DEF||[]).forEach(it=>weighted.push([it,1]));
+  if(!weighted.length) (byCat.GK||[]).forEach(it=>weighted.push([it,1]));
+  if(!weighted.length) return 'Unknown';
+  const total = weighted.reduce((s,[,w])=>s+w,0);
+  let r = rng()*total;
+  for(const [it,w] of weighted){ if(r<w) return it.name; r-=w; }
+  return weighted[weighted.length-1][0].name;
+}
+function simulateMatch(itemsA, itemsB, seedKey){
+  const rng = mulberry32(seedFromString(seedKey));
+  const sA = teamStrength(itemsA), sB = teamStrength(itemsB);
+  // ~0.028/min base ⇒ ~2.5 combined goals in 90 minutes at equal strength;
+  // a full 1-10 rating gap shifts that by roughly +/-0.4 goals a game.
+  const chance = (att, def) => Math.max(0.006, Math.min(0.09, 0.028 + (att - def) * 0.004));
+  const pA = chance(sA.attack, sB.defense), pB = chance(sB.attack, sA.defense);
+  const events = [];
+  for(let minute=1; minute<=90; minute++){
+    if(rng() < pA) events.push({ minute, team:0, scorer: pickScorer(sA.byCat, rng) });
+    if(rng() < pB) events.push({ minute, team:1, scorer: pickScorer(sB.byCat, rng) });
   }
-  redraw();
-  return wrap;
+  events.sort((a,b)=>a.minute-b.minute);
+  const score = [events.filter(e=>e.team===0).length, events.filter(e=>e.team===1).length];
+  const winner = score[0]>score[1] ? 0 : score[1]>score[0] ? 1 : null;
+  return { score, events, winner };
+}
+function matchScoreCardHTML(nicks, m){
+  const scorerLines = side => {
+    const goals = m.events.filter(e=>e.team===side);
+    return goals.length ? goals.map(g=>`⚽ ${g.minute}&prime; ${escapeHtml(g.scorer)}`).join('<br>') : '<span class="ms-none">No goals</span>';
+  };
+  return `<div class="match-score">
+      <span class="ms-team">${escapeHtml(nicks[0])}</span>
+      <span class="ms-num">${m.score[0]} &ndash; ${m.score[1]}</span>
+      <span class="ms-team">${escapeHtml(nicks[1])}</span>
+    </div>
+    <div class="match-scorers">
+      <div class="ms-col">${scorerLines(0)}</div>
+      <div class="ms-col right">${scorerLines(1)}</div>
+    </div>`;
 }
 
 /* ============ SAVE AS IMAGE ============ */
@@ -3908,11 +4029,13 @@ function buildShareText(){
   lines.push(`Dr4fter — ${d.themeLabel}`);
   lines.push(d.verdict);
   lines.push('');
+  const hideR = themeHidesRatings(d.themeKey);
   d.nicks.forEach((n,i)=>{
     lines.push(`${n} — $${20-d.budgets[i]} spent`);
     d.itemsArr[i].forEach(it=>{
       const price = it.paid===0 ? 'FREE' : '$'+it.paid;
-      lines.push(`  ${it.cat ? catShortLabel(d.catThemeKey, it.cat)+': ' : ''}${it.name} (${it.r}/10) — ${price}`);
+      const rate = hideR ? '' : ` (${it.r}/10)`;
+      lines.push(`  ${it.cat ? catShortLabel(d.catThemeKey, it.cat)+': ' : ''}${it.name}${rate} — ${price}`);
     });
     lines.push('');
   });
