@@ -4,8 +4,8 @@
   "private": true,
   "description": "Dr4fter - a live ascending-auction party game",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "dev": "wrangler pages dev public",
+    "deploy": "wrangler pages deploy public"
   },
   "devDependencies": {
     "wrangler": "^3.90.0"

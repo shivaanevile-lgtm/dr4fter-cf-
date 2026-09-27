@@ -1,11 +1,13 @@
 name = "dr4fter"
-main = "src/index.js"
 compatibility_date = "2025-01-01"
+pages_build_output_dir = "public"
 
-# static files (index.html) are served from ./public
-[assets]
-directory = "./public"
-binding = "ASSETS"
+# Pages "advanced mode": public/_worker.js is a directory-based Worker (its
+# index.js is the entry point, and it imports room-do.js/engine.js/gamedata.js
+# as siblings, unchanged from the plain-Worker layout). Pages runs it for
+# every request and hands it an ASSETS binding automatically to fall back to
+# the static files sitting next to it — no [assets] block needed here, that
+# was Worker-only config.
 
 # one Durable Object per room — strongly consistent, requests handled one at a
 # time, which removes the whole class of race conditions the Netlify build had
@@ -19,14 +21,16 @@ tag = "v1"
 new_sqlite_classes = ["Room"]
 
 # permanent snapshots for /r/<id> share links
+# Created via the Cloudflare connector (namespace "dr4fter-results") since
+# the previous account's namespaces were lost along with it.
 [[kv_namespaces]]
 binding = "RESULTS"
-id = "401bab22bf0d4e478947362f7ce796ec"
+id = "97a339b8cdc4427297c6375b9d18dca9"
 
-# shared AI-learning data
+# shared AI-learning data (namespace "dr4fter-aiprefs")
 [[kv_namespaces]]
 binding = "AIPREFS"
-id = "dab78dec8d0f4c54b983855715c5d67f"
+id = "f1ba569d6c864094a4ac691375d0e0c5"
 
 # Cloudflare Workers AI — powers the "picture it" image on the results screen.
 # No API key: the binding is the auth.
