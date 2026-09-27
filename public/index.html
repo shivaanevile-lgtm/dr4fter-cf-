@@ -341,7 +341,13 @@
   .duel-mid{ font-size:10px; color:var(--chalk-soft); white-space:nowrap; }
   .duel-foot{ font-size:11.5px; color:var(--chalk-soft); margin-top:var(--s2); font-style:italic; }
   .pitch-wrap{ display:flex; gap:var(--s2); margin-bottom:var(--s4); }
+  .pitch-wrap.assign{ align-items:flex-start; }
   .pitch-col{ flex:1; text-align:center; font-size:11.5px; color:var(--chalk-soft); }
+  .pos-picker{ text-align:left; }
+  .pos-hint{ font-size:10.5px; color:var(--chalk-soft); font-style:italic; margin-bottom:6px; }
+  .pos-row{ display:flex; align-items:center; justify-content:space-between; gap:6px; padding:4px 0; border-bottom:1px solid var(--line-soft); }
+  .pos-name{ font-size:12px; color:var(--chalk); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  .pos-select{ font-size:11px; padding:3px 4px; border-radius:6px; border:1px solid var(--line); background:var(--deck-2); color:var(--chalk); flex:0 0 auto; }
   .pick-row{
     display:flex; justify-content:space-between; align-items:center; gap:var(--s2);
     padding:11px var(--s3); background:var(--deck-2);
@@ -919,7 +925,18 @@ music:{emoji:'🎤',name:'Best Music Artists',items:[
  ['The Beatles',9],['Beyoncé',8],['Michael Jackson',9],['Taylor Swift',8],['Kendrick Lamar',8],['Queen',8],
  ['Stevie Wonder',8],['Adele',6],['Prince',8],['Rihanna',6],['Radiohead',6],['Bob Dylan',7],
  ['Whitney Houston',7],['Kanye West',6],['Nirvana',6],['Fleetwood Mac',6],['Frank Ocean',5],['Daft Punk',5],
- ['Amy Winehouse',6],['The Rolling Stones',7]]}
+ ['Amy Winehouse',6],['The Rolling Stones',7]]},
+msvv:{emoji:'⚽',name:'MSVV Football Team',items:[
+ ['Shivaan',7],['Mihran',9],['Suveer',7],
+ ['Vedant',7],['Samvir',9],['Samarvir',8],
+ ['Kelvin',6],['Krishiv',6],['Aadit',7],
+ ['Medhaansh',7],['Kiyansh',8],['Arham',7],
+ ['Ayaan',6],['Katori',7],['Katyal',6],
+ ['Yuval',9],['Kayaan',8],['Raghav',6],
+ ['Siddhran',8],['Vihaan',9],['Viaan',6],
+ ['Garvit',8],['Saksham',8],['Hrehaan',6],
+ ['Jayaansh',9],['Jaskaran',9],['Vansh',9],
+ ['Ansh',8]],assignPositions:true}
 };
 
 const CUSTOM_ADJ = ['Vintage {T}','Luxury {T}','Limited-Edition {T}','Handcrafted {T}','Deluxe {T}','Rare {T}'];
@@ -1456,7 +1473,8 @@ const THEME_LEVEL = {
   sandwich:'easy', pizza:'easy', island:'easy',
   movie:'medium',
   football:'deep',
-  rivals_clasico:'deep', rivals_manchester:'deep', rivals_milan:'deep', rivals_london:'deep'
+  rivals_clasico:'deep', rivals_manchester:'deep', rivals_milan:'deep', rivals_london:'deep',
+  msvv:'easy'
 };
 const LEVEL_LABEL = { easy:'easy', medium:'some knowledge', deep:'deep cut' };
 function themeLevel(key){ return THEME_LEVEL[key] || 'medium'; }
@@ -1812,7 +1830,7 @@ const THEME_PACKS = [
   { key:'media',    name:'Screen & Sound', emoji:'🎬', blurb:'films, TV, music, games',
     themes:['movie','movies','tvshows','music','videogames'] },
   { key:'football', name:'Football',  emoji:'⚽', blurb:'squads & rivalries',
-    themes:['football','rivals_clasico','rivals_manchester','rivals_milan','rivals_london'] },
+    themes:['football','rivals_clasico','rivals_manchester','rivals_milan','rivals_london','msvv'] },
   { key:'worlds',   name:'Big Ideas', emoji:'🏝️', blurb:'islands, houses, powers',
     themes:['island','house','bedroom','world','superhero'] }
 ];
@@ -3621,7 +3639,10 @@ function renderResultsFromRoom(room){
 // 5-a-side SVG formation, 'list' for everything else).
 function resultViewFor(themeKey){
   const ct = CATEGORY_THEMES[themeKey];
-  return (ct && ct.resultView) || 'list';
+  if(ct && ct.resultView) return ct.resultView;
+  const t = THEMES[themeKey];
+  if(t && t.assignPositions) return 'pitch-assign';
+  return 'list';
 }
 function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
   showScreen('screen-results');
@@ -3639,6 +3660,20 @@ function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
     itemsArr.forEach((items,i)=>{
       const col = document.createElement('div'); col.className='pitch-col';
       col.innerHTML = `<div style="font-weight:700; font-size:12px; margin-bottom:4px;">${escapeHtml(nicks[i])}</div>` + renderPitchSVG(items);
+      pitchWrap.appendChild(col);
+    });
+    $('pitches-wrap').appendChild(pitchWrap);
+  }
+  if(resultView==='pitch-assign'){
+    const pitchWrap = document.createElement('div'); pitchWrap.className='pitch-wrap assign';
+    itemsArr.forEach((items,i)=>{
+      const col = document.createElement('div'); col.className='pitch-col';
+      const head = document.createElement('div');
+      head.style.cssText = 'font-weight:700; font-size:12px; margin-bottom:4px;';
+      head.textContent = nicks[i];
+      col.appendChild(head);
+      if(items.length===5) col.appendChild(buildPositionPicker(items));
+      else col.innerHTML += `<div class="empty-note">Not enough players to line up yet</div>`;
       pitchWrap.appendChild(col);
     });
     $('pitches-wrap').appendChild(pitchWrap);
@@ -3813,6 +3848,56 @@ function renderPitchSVG(items){
   if(byCat.GK[0])  jersey(W/2, 258, byCat.GK[0], true);
   svg += `</svg>`;
   return svg;
+}
+
+/* ============ POST-DRAFT POSITION PICKER (MSVV-style themes) ============ */
+// For flat (non-slotted) themes marked assignPositions:true, nobody's
+// position is decided during the draft — each player lines up their own
+// 5 winners afterwards, right here on the results screen. Purely cosmetic:
+// it never touches scoring (judgeGame ignores .cat for flat themes).
+const POS_ORDER = ['GK','DEF','MID','ATT'];
+const POS_LABEL = {GK:'Goalkeeper', DEF:'Defender', MID:'Midfielder', ATT:'Attacker'};
+const POS_DEFAULT_5 = ['GK','DEF','MID','MID','ATT']; // a sensible 5-a-side starting shape
+function buildPositionPicker(items){
+  const wrap = document.createElement('div');
+  wrap.className = 'pos-picker';
+  const assigned = items.map((it,i)=> POS_DEFAULT_5[i] || 'MID');
+
+  const hint = document.createElement('div');
+  hint.className = 'pos-hint';
+  hint.textContent = "You're up — put your 5 wherever you want on the pitch.";
+  wrap.appendChild(hint);
+
+  const rowsHost = document.createElement('div');
+  items.forEach((it,i)=>{
+    const row = document.createElement('div');
+    row.className = 'pos-row';
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'pos-name';
+    nameSpan.textContent = it.name;
+    const sel = document.createElement('select');
+    sel.className = 'pos-select';
+    POS_ORDER.forEach(p=>{
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = POS_LABEL[p];
+      if(assigned[i]===p) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.onchange = ()=>{ assigned[i] = sel.value; redraw(); };
+    row.appendChild(nameSpan);
+    row.appendChild(sel);
+    rowsHost.appendChild(row);
+  });
+  wrap.appendChild(rowsHost);
+
+  const pitchHost = document.createElement('div');
+  wrap.appendChild(pitchHost);
+  function redraw(){
+    const withCats = items.map((it,i)=>Object.assign({}, it, {cat: assigned[i]}));
+    pitchHost.innerHTML = renderPitchSVG(withCats);
+  }
+  redraw();
+  return wrap;
 }
 
 /* ============ SAVE AS IMAGE ============ */
