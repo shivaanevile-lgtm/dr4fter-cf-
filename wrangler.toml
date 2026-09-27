@@ -1,13 +1,10 @@
 name = "dr4fter"
+main = "src/index.js"
 compatibility_date = "2025-01-01"
-pages_build_output_dir = "public"
 
-# Pages "advanced mode": public/_worker.js is a directory-based Worker (its
-# index.js is the entry point, and it imports room-do.js/engine.js/gamedata.js
-# as siblings, unchanged from the plain-Worker layout). Pages runs it for
-# every request and hands it an ASSETS binding automatically to fall back to
-# the static files sitting next to it — no [assets] block needed here, that
-# was Worker-only config.
+[assets]
+directory = "public"
+binding = "ASSETS"
 
 # one Durable Object per room — strongly consistent, requests handled one at a
 # time, which removes the whole class of race conditions the Netlify build had

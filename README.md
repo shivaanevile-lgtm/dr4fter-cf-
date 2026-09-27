@@ -1,18 +1,11 @@
-# Dr4fter — Cloudflare Pages edition
+# Dr4fter — Cloudflare Worker edition
 
-This runs as a Cloudflare Pages project in "advanced mode": `public/` is the
-static asset folder Pages serves directly (index.html, images, etc.), and
-`public/_worker.js/` is a directory-based Worker that Pages runs for every
-request — its `index.js` is the entry point, and it imports `room-do.js`,
-`engine.js` and `gamedata.js` as plain sibling modules, same as a standalone
-Worker would. Pages hands that Worker an `ASSETS` binding automatically to
-fall back to the static files sitting next to it, so nothing in the code
-itself changed — only where the files live and how it's deployed.
-
-(An earlier version of this ran as a plain Cloudflare Worker instead of
-Pages — same code, just under `src/` with a `main =` entry in wrangler.toml
-and an explicit `[assets]` block. Converted to Pages for the shorter/cleaner
-project URL and git-based auto-deploy.)
+This runs as a plain Cloudflare Worker: `src/index.js` is the entry point and
+imports `room-do.js`, `engine.js` and `gamedata.js` as sibling modules.
+`public/` is served as static assets via the `[assets]` binding in
+wrangler.toml — `index.html` and everything else in that folder is served
+directly, and any request the assets binding doesn't handle falls through to
+the Worker.
 
 ## What changed from the Netlify build
 
@@ -32,35 +25,28 @@ a time against strongly consistent storage, so the ETag optimistic-locking,
 the retry loops and the stale-read workarounds aren't needed. That whole class
 of bug is removed by construction rather than defended against.
 
-## Deploy from GitHub
+## Deploy
 
-1. Push this folder to a GitHub repo.
-2. Cloudflare dashboard → **Workers & Pages** → **Create** → **Pages** →
-   **Connect to Git**, pick the repo.
-3. Build settings: no build command needed (this is a static folder plus a
-   Worker, nothing to compile) — set the build output directory to `public`.
-4. Create two KV namespaces (Storage & Databases → KV):
-   - one for `RESULTS`
-   - one for `AIPREFS`
-5. Paste their IDs into `wrangler.toml` where marked (replacing the
-   `REPLACE_WITH_NEW_..._NAMESPACE_ID` placeholders), commit, push.
-6. In the Pages project's Settings → Functions → Bindings, add the same KV
-   namespaces, the `ROOM` Durable Object binding, and the `AI` binding —
-   wrangler.toml drives a CLI deploy, but a git-connected Pages project also
-   needs these set in the dashboard so the auto-deploy build picks them up.
-7. Cloudflare builds and deploys on every push, at the project's own
-   `<project-name>.pages.dev` URL (or a custom domain attached to it).
-
-### Or from your machine
 ```
 npm install
 npx wrangler kv namespace create RESULTS
 npx wrangler kv namespace create AIPREFS
-# paste the two ids into wrangler.toml
-npx wrangler pages deploy public
+# paste the two ids into wrangler.toml if they differ from the ones already there
+npx wrangler deploy
 ```
-The first deploy from the CLI will ask you to create or pick the Pages
-project it belongs to.
+
+This deploys to your `*.workers.dev` subdomain (or a custom domain/route you
+attach in the dashboard afterward). `wrangler.toml` already has the Durable
+Object binding, both KV bindings, and the Workers AI binding wired up, so a
+plain `wrangler deploy` picks all of it up with no dashboard configuration
+needed.
+
+### Deploying from GitHub instead
+
+Cloudflare can also build and deploy a Worker automatically on every push:
+dashboard → Workers & Pages → Create → import the repo. Since this is a plain
+Worker (not Pages), it reads `wrangler.toml` directly, so no manual bindings
+setup is required in the dashboard.
 
 ## Note on Durable Objects
 
