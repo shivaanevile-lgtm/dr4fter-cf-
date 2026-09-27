@@ -463,6 +463,7 @@
     border:1px solid var(--line); background:var(--deck); color:var(--chalk); cursor:pointer;
   }
   .pos-prompt-btns button:active{ transform:translateY(1px); background:var(--volt); color:#12213B; }
+  .pos-prompt-err{ font-size:11.5px; color:#FF8A8A; margin-top:7px; min-height:14px; }
   .confetti-piece{ position:fixed; width:9px; height:14px; z-index:1999; pointer-events:none; }
 
   /* ---- debug console ---- */
@@ -495,6 +496,7 @@
   }
   .waiting-note{ text-align:center; font-size:13px; color:var(--chalk-soft); padding:var(--s4) 0; font-style:italic; }
   .pitch{ width:100%; height:auto; border-radius:10px; border:1px solid var(--line); display:block; }
+  .stall-pitch{ max-width:220px; margin:6px auto 0; }
 
   .chat-box{ background:var(--deck); border:1px solid var(--line); border-radius:12px; margin-top:var(--s3); overflow:hidden; }
   .chat-head{ display:flex; justify-content:space-between; align-items:center; padding:9px var(--s3);
@@ -2538,7 +2540,7 @@ function resolveLotWinner(P, winnerIdx, amount){
     if(App.mode==='practice' && winnerIdx===1){
       rec.cat = POS_DEFAULT_5[player.items.length-1] || 'MID';
     } else {
-      promptForPosition(player.nick, lotName, (pos)=>{ rec.cat = pos; });
+      promptForPosition(player.nick, lotName, player.items, (pos)=>{ rec.cat = pos; });
     }
   }
   recordHumanBidToServer(winnerIdx, P);
@@ -2953,7 +2955,7 @@ function renderPracticeDraft(){
   const P = App.practice;
   if(!P || !P.currentLot){ return; }
   if(App.mode==='local'){ renderLocalDraft(P); return; }
-  renderStalls(P.players, P.mode==='contested'?P.currentBidder:(P.mode==='solo'?P.soloPlayer:null), P.mode==='contested'?P.turn:null, P.catThemeKey);
+  renderStalls(P.players, P.mode==='contested'?P.currentBidder:(P.mode==='solo'?P.soloPlayer:null), P.mode==='contested'?P.turn:null, P.catThemeKey, App.themeKey);
 
   $('lot-cat').textContent = P.currentLot.cat ? roleLabel(P.catThemeKey, P.currentLot.cat) : P.themeEmoji+' '+P.themeName;
   $('lot-name').textContent = P.currentLot.name;
@@ -3015,7 +3017,7 @@ function renderLocalDraft(P){
   const activeSide = P.mode==='contested' ? P.turn : (P.mode==='solo' ? P.soloPlayer : 0);
   const turnKey = P.currentLot.name+'|'+P.currentBid+'|'+activeSide+'|'+P.mode;
 
-  renderStalls(P.players, P.mode==='contested'?P.currentBidder:(P.mode==='solo'?P.soloPlayer:null), P.mode==='contested'?P.turn:null, P.catThemeKey);
+  renderStalls(P.players, P.mode==='contested'?P.currentBidder:(P.mode==='solo'?P.soloPlayer:null), P.mode==='contested'?P.turn:null, P.catThemeKey, App.themeKey);
   $('lot-cat').textContent = P.currentLot.cat ? roleLabel(P.catThemeKey, P.currentLot.cat) : P.themeEmoji+' '+P.themeName;
   $('lot-name').textContent = P.currentLot.name;
   const ovrP = ovrFor(P.currentLot.name);
@@ -3199,20 +3201,33 @@ function playerCardHTML(nick, budget, items, opts){
   const pct = Math.max(0, Math.min(100, (budget/20)*100));
   const tier = pct===0 ? 'tier-broke' : pct<=20 ? 'tier-low' : pct<=50 ? 'tier-mid' : 'tier-full';
   const dot = opts.turnActive ? '<span class="turn-dot"></span>' : '';
-  const rows = items.length
-    ? items.map(it=>`<div class="item-row"><span class="iname">${it.cat?`<b>${escapeHtml(catShortLabel(opts.catThemeKey, it.cat))}:</b> `:''}${escapeHtml(it.name||'')}</span><span class="iprice">${it.paid===0?'FREE':(it.paid!=null?'$'+it.paid:'')}</span></div>`).join('')
-    : `<div class="empty-note">Nothing yet</div>`;
+  // MSVV-style themes get a live pitch graphic instead of the plain item
+  // list — positions are already chosen the instant each pick is won, so
+  // the formation can be shown filling in as the draft happens, not just
+  // at the results screen.
+  const body = opts.pitchView
+    ? `<div class="stall-pitch">${renderPitchSVG(items, !!opts.hideRating)}</div>`
+    : (items.length
+        ? items.map(it=>`<div class="item-row"><span class="iname">${it.cat?`<b>${escapeHtml(catShortLabel(opts.catThemeKey, it.cat))}:</b> `:''}${escapeHtml(it.name||'')}</span><span class="iprice">${it.paid===0?'FREE':(it.paid!=null?'$'+it.paid:'')}</span></div>`).join('')
+        : `<div class="empty-note">Nothing yet</div>`);
   return `<div class="player-card${opts.leading?' leading':''}">
     <div class="prow"><span class="pname">${dot}${escapeHtml(nick)}</span><span class="pbudget mono">$${budget}</span></div>
     <div class="psub">remaining · ${items.length}/5 items</div>
     <div class="budget-track"><div class="budget-fill ${tier}" style="width:${pct}%"></div></div>
-    ${rows}
+    ${body}
   </div>`;
 }
-function renderStalls(players, leadingIdx, turnIdx, catThemeKey){
+function renderStalls(players, leadingIdx, turnIdx, catThemeKey, themeKey){
   const row = $('stall-row'); row.innerHTML='';
+  // Only flat, no-pre-decided-position themes (MSVV) get the live pitch —
+  // category-draft themes (football, rivals, ...) keep their existing list
+  // view during the draft, unchanged. Checked against CATEGORY_THEMES/THEMES
+  // directly (not the catThemeKey param, which some call sites pass
+  // inconsistently) so this can't misfire either way.
+  const wantsPitch = !CATEGORY_THEMES[themeKey] && themeUsesImmediatePlacement(themeKey);
+  const hideR = wantsPitch && themeHidesRatings(themeKey);
   players.forEach((p,i)=>{
-    row.innerHTML += playerCardHTML(p.nick, p.budget, p.items, {leading: leadingIdx===i, turnActive: turnIdx===i, catThemeKey});
+    row.innerHTML += playerCardHTML(p.nick, p.budget, withPosChoices(p.items), {leading: leadingIdx===i, turnActive: turnIdx===i, catThemeKey, pitchView: wantsPitch, hideRating: hideR});
   });
 }
 
@@ -3292,7 +3307,7 @@ function renderOnlineDraft(room){
         // Only prompt for OUR OWN side's win — an opponent's placement
         // choice is theirs to make on their own screen, never synced here.
         if(wantsPlacement && entry.player===myIdx){
-          promptForPosition(sideLabelClient(room, entry.player), entry.name, (pos)=>{ App.posChoices[entry.name] = pos; });
+          promptForPosition(sideLabelClient(room, entry.player), entry.name, withPosChoices(bidders[entry.player].items), (pos)=>{ App.posChoices[entry.name] = pos; });
         }
       }
       App.onlineBidLogSeen = g.bidLog.length;
@@ -3316,7 +3331,7 @@ function renderOnlineDraft(room){
         budget: t.budget, items: withPosChoices(t.items)
       }))
     : bidders.map(p=>({nick:p.nickname, budget:p.budget, items:withPosChoices(p.items)}));
-  renderStalls(displaySides, g.currentBidderIdx, g.mode==='contested'?g.turnIdx:null, room.theme.key);
+  renderStalls(displaySides, g.currentBidderIdx, g.mode==='contested'?g.turnIdx:null, room.theme.key, room.theme.key);
   renderChat('draft-chat', room);
 
   const amHost = room.players.find(p=>p.nickname===App.nickname && p.role==='host');
@@ -3599,7 +3614,9 @@ function showResultsScreen(players, P){
   const nicks = players.map(p=>p.nick);
   const budgets = players.map(p=>p.budget);
   const isLocal = App.mode==='local';
-  renderResults(itemsArr, nicks, budgets, P.bidLog, resultViewFor(P.catThemeKey), {
+  // P.catThemeKey is null for flat themes (MSVV included) — resultViewFor
+  // needs the actual theme key to see assignPositions, so fall back to it.
+  renderResults(itemsArr, nicks, budgets, P.bidLog, resultViewFor(P.catThemeKey || App.themeKey), {
     themeLabel: (P.themeEmoji||'')+' '+P.themeName,
     catThemeKey: P.catThemeKey,
     themeKey: App.themeKey,
@@ -3914,6 +3931,9 @@ function renderPitchSVG(items, hideRating){
 const POS_ORDER = ['GK','DEF','MID','ATT'];
 const POS_LABEL = {GK:'Goalkeeper', DEF:'Defender', MID:'Midfielder', ATT:'Attacker'};
 const POS_DEFAULT_5 = ['GK','DEF','MID','MID','ATT']; // a sensible 5-a-side starting shape, used to silently place an AI's or an unanswered pick
+// How many of a 5-a-side team's 5 slots each position gets — one team can't
+// field two goalkeepers, so this caps what promptForPosition will accept.
+const POS_CAP = {GK:1, DEF:1, MID:2, ATT:1};
 function themeUsesImmediatePlacement(themeKey){ const t = THEMES[themeKey]; return !!(t && t.assignPositions); }
 // Most themes get 3 re-rolls on an uncontested item before the 4th attempt
 // just hands it over. A theme can override this (MSVV: 1) with maxSkips.
@@ -3926,25 +3946,44 @@ function withPosChoices(items){
   return items.map(it => (it.cat==null && App.posChoices[it.name]!=null)
     ? Object.assign({}, it, {cat: App.posChoices[it.name]}) : it);
 }
+// How many of this side's OTHER items are already sitting in a given
+// position — existingItems is the side's current items (including the one
+// just won, still cat:null at this point, which naturally doesn't count).
+function positionCountSoFar(existingItems, pos){
+  return (existingItems||[]).filter(it=>it && it.cat===pos).length;
+}
 // A small non-blocking card, same footprint as showItemWonToast: pick a spot
 // for the player you just won. The game keeps moving while it's up.
-function promptForPosition(nick, itemName, onChoose){
+// existingItems lets it enforce the 5-a-side shape (one GK, one DEF, two MID,
+// one ATT) — tapping a position that's already full doesn't close the card,
+// it just explains why and waits for a different tap.
+function promptForPosition(nick, itemName, existingItems, onChoose){
   const el = document.createElement('div');
   el.className = 'pos-prompt';
   el.innerHTML = `<div class="pos-prompt-head">📍 ${escapeHtml(nick)} — where does ${escapeHtml(itemName)} play?</div>
-    <div class="pos-prompt-btns">${POS_ORDER.map(p=>`<button data-p="${p}">${POS_LABEL[p]}</button>`).join('')}</div>`;
+    <div class="pos-prompt-btns">${POS_ORDER.map(p=>`<button data-p="${p}">${POS_LABEL[p]}</button>`).join('')}</div>
+    <div class="pos-prompt-err"></div>`;
   document.body.appendChild(el);
   requestAnimationFrame(()=>el.classList.add('show'));
+  const errEl = el.querySelector('.pos-prompt-err');
   el.querySelectorAll('button').forEach(b=>{
     b.onclick = ()=>{
+      const pos = b.dataset.p;
+      const cap = POS_CAP[pos] || 99;
+      if(positionCountSoFar(existingItems, pos) >= cap){
+        sndClick();
+        if(errEl) errEl.textContent = `${POS_LABEL[pos]} is already filled — pick another position.`;
+        return;
+      }
       sndClick();
-      onChoose(b.dataset.p);
+      onChoose(pos);
       // Visible confirmation the tap registered — the card used to just vanish,
       // which reads as "nothing happened" rather than "position saved".
       const headEl = el.querySelector('.pos-prompt-head');
       const btnsEl = el.querySelector('.pos-prompt-btns');
-      if(headEl) headEl.textContent = `✅ ${nick}'s ${itemName} → ${POS_LABEL[b.dataset.p]}`;
+      if(headEl) headEl.textContent = `✅ ${nick}'s ${itemName} → ${POS_LABEL[pos]}`;
       if(btnsEl) btnsEl.remove();
+      if(errEl) errEl.remove();
       setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(), 200); }, 700);
     };
   });
