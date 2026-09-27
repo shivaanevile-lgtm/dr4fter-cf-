@@ -3938,9 +3938,14 @@ function promptForPosition(nick, itemName, onChoose){
   el.querySelectorAll('button').forEach(b=>{
     b.onclick = ()=>{
       sndClick();
-      el.classList.remove('show');
-      setTimeout(()=>el.remove(), 200);
       onChoose(b.dataset.p);
+      // Visible confirmation the tap registered — the card used to just vanish,
+      // which reads as "nothing happened" rather than "position saved".
+      const headEl = el.querySelector('.pos-prompt-head');
+      const btnsEl = el.querySelector('.pos-prompt-btns');
+      if(headEl) headEl.textContent = `✅ ${nick}'s ${itemName} → ${POS_LABEL[b.dataset.p]}`;
+      if(btnsEl) btnsEl.remove();
+      setTimeout(()=>{ el.classList.remove('show'); setTimeout(()=>el.remove(), 200); }, 700);
     };
   });
 }
