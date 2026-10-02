@@ -319,6 +319,32 @@ const PIZZA = {
 const PIZZA_CATS = ['CRUST','SAUCE','CHEESE','TOPPING'];
 const PIZZA_REQUIRED = {CRUST:1,SAUCE:1,CHEESE:1,TOPPING:2};
 
+const COUNTRY = {
+ pool:{
+  SIZE:[['Landmass the size of Russia',10],['Landmass the size of Canada',8],['Landmass the size of the United States',8],
+      ['Landmass the size of China',8],['Landmass the size of Brazil',7],['Landmass the size of Australia',7],
+      ['Landmass the size of India',6],['Landmass the size of Argentina',6],['Landmass the size of Kazakhstan',5],
+      ['Landmass the size of Algeria',5],['Landmass the size of Mongolia',4],['Landmass the size of Mexico',4]],
+  ECONOMY:[['An economy like the United States',9],['An economy like China',9],['An economy like Germany',7],
+      ['An economy like Japan',7],['An economy like India',7],['An economy like the United Kingdom',6],
+      ['An economy like France',6],['An economy like South Korea',6],['An economy like Switzerland',6],
+      ['An economy like Singapore',5],['An economy like Canada',5],['An economy like Brazil',5]],
+  CUISINE:[['Cuisine like Italy',9],['Cuisine like Japan',8],['Cuisine like France',8],['Cuisine like India',8],
+      ['Cuisine like Thailand',7],['Cuisine like Mexico',7],['Cuisine like China',7],['Cuisine like Spain',7],
+      ['Cuisine like Vietnam',6],['Cuisine like Turkey',6],['Cuisine like Lebanon',6],['Cuisine like South Korea',6],
+      ['Cuisine like Greece',6]],
+  CULTURE:[['Heritage like Italy',8],['Heritage like Greece',8],['Heritage like Egypt',8],['Heritage like France',8],
+      ['Heritage like Japan',8],['Heritage like India',8],['Heritage like China',8],['Heritage like the United Kingdom',7],
+      ['Heritage like Mexico',6],['Heritage like Peru',6],['Heritage like Iran',6],['Heritage like Turkey',6]],
+  NATURE:[['Landscapes like New Zealand',8],['Landscapes like Iceland',8],['Landscapes like Norway',8],
+      ['Landscapes like Switzerland',8],['Landscapes like Canada',7],['Landscapes like Chile',7],
+      ['Landscapes like South Africa',7],['Landscapes like Indonesia',7],['Landscapes like Costa Rica',7],
+      ['Landscapes like Brazil',7],['Landscapes like Peru',6],['Landscapes like Kenya',6]]
+ }
+};
+const COUNTRY_CATS = ['SIZE','ECONOMY','CUISINE','CULTURE','NATURE'];
+const COUNTRY_REQUIRED = {SIZE:1,ECONOMY:1,CUISINE:1,CULTURE:1,NATURE:1};
+
 const MOVIE_CATS = ['GENRE','DIRECTOR','ACTOR','SETTING'];
 const MOVIE_REQUIRED = {GENRE:1,DIRECTOR:1,ACTOR:2,SETTING:1};
 
@@ -339,7 +365,10 @@ const CATEGORY_THEMES = {
    catShort:{CRUST:'Crust',SAUCE:'Sauce',CHEESE:'Cheese',TOPPING:'Topping'}, resultView:'list'},
  island:{name:'Build A Private Island', emoji:'🏝️', cats:ISLAND_CATS, required:ISLAND_REQUIRED, pool:ISLAND.pool, icons:null,
    catLabel:{SETTING:'🌊 The Island',HOME:'🏠 Your Home',TRANSPORT:'🚤 Getting Around',AMENITY:'✨ Amenity'},
-   catShort:{SETTING:'Island',HOME:'Home',TRANSPORT:'Transport',AMENITY:'Amenity'}, resultView:'list'}
+   catShort:{SETTING:'Island',HOME:'Home',TRANSPORT:'Transport',AMENITY:'Amenity'}, resultView:'list'},
+ country:{name:'Build Your Perfect Country', emoji:'🌎', cats:COUNTRY_CATS, required:COUNTRY_REQUIRED, pool:COUNTRY.pool, icons:null,
+   catLabel:{SIZE:'📏 Size',ECONOMY:'💰 Economy',CUISINE:'🍽️ Cuisine',CULTURE:'🏛️ Culture',NATURE:'🏔️ Nature'},
+   catShort:{SIZE:'Size',ECONOMY:'Economy',CUISINE:'Cuisine',CULTURE:'Culture',NATURE:'Nature'}, resultView:'list'}
 };
 
 // club = the side they're most associated with (current club for actives,
@@ -947,4 +976,4 @@ function nationOf(name){ const m = footballMeta(name); return m ? m[1] : null; }
 function itemById(id){ return ITEM_BY_ID[parseInt(id,10)]; }
 /* END GAME DATA */
 
-export { THEMES, FOOTBALL, FOOTBALL_META, FOOTBALL_LEGENDS, FOOTBALL_LEGEND_META, CLUB_KITS, kitFor, FOOTBALL_CATS, FOOTBALL_REQUIRED, SANDWICH, SANDWICH_CATS, SANDWICH_REQUIRED, MOVIE, MOVIE_CATS, MOVIE_REQUIRED, PIZZA, PIZZA_CATS, PIZZA_REQUIRED, ISLAND, ISLAND_CATS, ISLAND_REQUIRED, RIVALRIES, FC27_OVR, ICON_OVR, LEGEND_OVR, FC26_OVR, ovrOf, ovrToRating, ovrFor, isOfficialOvr, CATEGORY_THEMES, ITEM_BY_ID, ID_BY_NAME, itemIdFor, itemById, clubOf, nationOf, checkText };
+export { THEMES, FOOTBALL, FOOTBALL_META, FOOTBALL_LEGENDS, FOOTBALL_LEGEND_META, CLUB_KITS, kitFor, FOOTBALL_CATS, FOOTBALL_REQUIRED, SANDWICH, SANDWICH_CATS, SANDWICH_REQUIRED, MOVIE, MOVIE_CATS, MOVIE_REQUIRED, PIZZA, PIZZA_CATS, PIZZA_REQUIRED, ISLAND, ISLAND_CATS, ISLAND_REQUIRED, COUNTRY, COUNTRY_CATS, COUNTRY_REQUIRED, RIVALRIES, FC27_OVR, ICON_OVR, LEGEND_OVR, FC26_OVR, ovrOf, ovrToRating, ovrFor, isOfficialOvr, CATEGORY_THEMES, ITEM_BY_ID, ID_BY_NAME, itemIdFor, itemById, clubOf, nationOf, checkText };
