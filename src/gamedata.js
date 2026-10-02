@@ -156,7 +156,14 @@ msvv:{emoji:'⚽',name:'MSVV Football Team',items:[
  ['Garvit',5],['Saksham',5],['Hrehaan',5],
  ['Jayaansh',5],['Jaskaran',5],['Vansh',5],
  ['Ansh',5]
-],assignPositions:true,hideRatings:true,maxSkips:1}
+],assignPositions:true,hideRatings:true,maxSkips:1},
+fortnite:{emoji:'🎮',name:'Fortnite Loadout Draft',items:[
+ ['Pump Shotgun',8],['Assault Rifle',8],['Drum Gun',8],['Tactical Pistol',8],['Rapid Fire SMG',8],
+ ['Heavy Impact Sniper Rifle',8],['Hunting Rifle',9],['Striker Pump Shotgun',9],['8-Bit Shotgun',8],
+ ['Spire Rifle',6],['Mega Buster',5],['Chug Jug',8],['Shield Potion',5],['Small Shield Potion',3],
+ ['Med Kit',3],['Bandage',2],['Apple',2],['Golden Apple',10],['Flopper',3],['Golden Truffle',9],
+ ['1-Up Token',8],['Sonic Power Sneakers',6]
+],loadoutView:true}
 };
 
 const CUSTOM_ADJ = ['Vintage {T}','Luxury {T}','Limited-Edition {T}','Handcrafted {T}','Deluxe {T}','Rare {T}'];

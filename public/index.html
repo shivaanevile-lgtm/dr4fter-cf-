@@ -498,6 +498,62 @@
   .pitch{ width:100%; height:auto; border-radius:10px; border:1px solid var(--line); display:block; }
   .stall-pitch{ max-width:220px; margin:6px auto 0; }
 
+  /* ---- Fortnite-style loadout slots (5-slot inventory, rarity-colored) ---- */
+  .stall-loadout{ max-width:220px; margin:6px auto 0; }
+  .loadout-col{ display:flex; flex-direction:column; gap:6px; }
+  .loadout-slot{
+    display:flex; align-items:center; gap:8px; padding:6px 9px;
+    border-radius:8px; border:2px solid; background:rgba(255,255,255,.04);
+  }
+  .loadout-slot .lo-icon{ font-size:19px; width:24px; flex:0 0 auto; text-align:center; }
+  .loadout-slot .lo-name{
+    font-size:11.5px; font-weight:700; flex:1; line-height:1.2;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .loadout-slot .lo-price{ font-family:var(--num); font-size:10.5px; color:var(--chalk-soft); flex:0 0 auto; }
+  .loadout-slot.lo-empty{ opacity:.4; border-style:dashed; border-color:var(--line); }
+  .loadout-slot.lo-empty .lo-name{ font-weight:400; font-style:italic; }
+  .rarity-common{ border-color:#9AA2AD; background:rgba(154,162,173,.14); }
+  .rarity-uncommon{ border-color:#2ECC71; background:rgba(46,204,113,.14); }
+  .rarity-rare{ border-color:#3B9DF2; background:rgba(59,157,242,.16); }
+  .rarity-epic{ border-color:#B14FE0; background:rgba(177,79,224,.16); }
+  .rarity-legendary{ border-color:#F2890C; background:rgba(242,137,12,.18); }
+  .rarity-mythic{ border-color:#F5D020; background:rgba(245,208,32,.18); }
+  .rarity-transcendent{ border-color:#FF4FD8; background:rgba(255,79,216,.18); }
+
+  /* ---- selectable room color themes/skins ---- */
+  .roomtheme-row{ display:flex; justify-content:center; gap:10px; padding:0 0 var(--s4); flex-wrap:wrap; }
+  .roomtheme-dot{
+    width:26px; height:26px; border-radius:50%; cursor:pointer;
+    border:2.5px solid rgba(255,255,255,.18); padding:0;
+  }
+  .roomtheme-dot.active{ border-color:var(--chalk); box-shadow:0 0 0 2px var(--deep), 0 0 0 4px var(--volt); }
+  html[data-roomtheme="ocean"]{
+    --deep:#071B2B; --deck:#0E2C44; --deck-2:#163D59; --chalk:#EAF4F6; --chalk-soft:#7FA9B8;
+    --chalk-faint:#4D7889; --volt:#1FB6C9; --volt-dark:#13879A; --mint:#38D9A9; --gold:#FFD166;
+    --stamp:#FF5A5F; --line:rgba(234,244,246,.14); --line-soft:rgba(234,244,246,.07);
+  }
+  html[data-roomtheme="sunset"]{
+    --deep:#2B1220; --deck:#401B2F; --deck-2:#54243E; --chalk:#FBEEE6; --chalk-soft:#D79AA8;
+    --chalk-faint:#A56E7E; --volt:#FF5D62; --volt-dark:#C8393F; --mint:#FFB703; --gold:#FFD764;
+    --stamp:#FF2D55; --line:rgba(251,238,230,.14); --line-soft:rgba(251,238,230,.07);
+  }
+  html[data-roomtheme="forest"]{
+    --deep:#0E2117; --deck:#17331F; --deck-2:#204427; --chalk:#EDF3EA; --chalk-soft:#9CB89E;
+    --chalk-faint:#688969; --volt:#6FCF52; --volt-dark:#48A332; --mint:#2ECC71; --gold:#E3C567;
+    --stamp:#E25555; --line:rgba(237,243,234,.14); --line-soft:rgba(237,243,234,.07);
+  }
+  html[data-roomtheme="mono"]{
+    --deep:#151515; --deck:#222222; --deck-2:#2E2E2E; --chalk:#F2F2F2; --chalk-soft:#9A9A9A;
+    --chalk-faint:#6B6B6B; --volt:#F2F2F2; --volt-dark:#C9C9C9; --mint:#9A9A9A; --gold:#D8D8D8;
+    --stamp:#E05454; --line:rgba(242,242,242,.14); --line-soft:rgba(242,242,242,.07);
+  }
+  html[data-roomtheme="arcade"]{
+    --deep:#140B2E; --deck:#201046; --deck-2:#2C1760; --chalk:#F3EEFF; --chalk-soft:#B79EE8;
+    --chalk-faint:#7F62AE; --volt:#FF2FD0; --volt-dark:#C71FA3; --mint:#30E8D6; --gold:#FFE24A;
+    --stamp:#FF3B5C; --line:rgba(243,238,255,.14); --line-soft:rgba(243,238,255,.07);
+  }
+
   .chat-box{ background:var(--deck); border:1px solid var(--line); border-radius:12px; margin-top:var(--s3); overflow:hidden; }
   .chat-head{ display:flex; justify-content:space-between; align-items:center; padding:9px var(--s3);
     font-size:11.5px; color:var(--chalk-soft); letter-spacing:.08em; cursor:pointer; }
@@ -572,6 +628,7 @@
     <h1>Dr<span class="four">4</span>fter</h1>
     <p>a live auction party game</p>
   </div>
+  <div class="roomtheme-row" id="roomtheme-row"></div>
 
   <!-- HOME SCREEN -->
   <div class="screen active" id="screen-home">
@@ -956,7 +1013,41 @@ msvv:{emoji:'⚽',name:'MSVV Football Team',items:[
  ['Garvit',5],['Saksham',5],['Hrehaan',5],
  ['Jayaansh',5],['Jaskaran',5],['Vansh',5],
  ['Ansh',5]
-],assignPositions:true,hideRatings:true,maxSkips:1}
+],assignPositions:true,hideRatings:true,maxSkips:1},
+fortnite:{emoji:'🎮',name:'Fortnite Loadout Draft',items:[
+ ['Pump Shotgun',8],['Assault Rifle',8],['Drum Gun',8],['Tactical Pistol',8],['Rapid Fire SMG',8],
+ ['Heavy Impact Sniper Rifle',8],['Hunting Rifle',9],['Striker Pump Shotgun',9],['8-Bit Shotgun',8],
+ ['Spire Rifle',6],['Mega Buster',5],['Chug Jug',8],['Shield Potion',5],['Small Shield Potion',3],
+ ['Med Kit',3],['Bandage',2],['Apple',2],['Golden Apple',10],['Flopper',3],['Golden Truffle',9],
+ ['1-Up Token',8],['Sonic Power Sneakers',6]
+],loadoutView:true}
+};
+// Real current Chapter 7 Season 4 loot-pool items (checked live, Oct 2026) —
+// rarity drives the slot's border/fill color in the loadout view, icon is a
+// plain emoji stand-in rather than a reproduction of Epic's actual artwork.
+const FORTNITE_META = {
+ 'Pump Shotgun':{rarity:'legendary', icon:'🔫'},
+ 'Assault Rifle':{rarity:'legendary', icon:'🔫'},
+ 'Drum Gun':{rarity:'legendary', icon:'🔫'},
+ 'Tactical Pistol':{rarity:'legendary', icon:'🔫'},
+ 'Rapid Fire SMG':{rarity:'legendary', icon:'🔫'},
+ 'Heavy Impact Sniper Rifle':{rarity:'legendary', icon:'🎯'},
+ 'Hunting Rifle':{rarity:'mythic', icon:'🎯'},
+ 'Striker Pump Shotgun':{rarity:'mythic', icon:'🔫'},
+ '8-Bit Shotgun':{rarity:'legendary', icon:'🔫'},
+ 'Spire Rifle':{rarity:'epic', icon:'🔫'},
+ 'Mega Buster':{rarity:'rare', icon:'💥'},
+ 'Chug Jug':{rarity:'legendary', icon:'🧃'},
+ 'Shield Potion':{rarity:'rare', icon:'🧪'},
+ 'Small Shield Potion':{rarity:'uncommon', icon:'🧪'},
+ 'Med Kit':{rarity:'uncommon', icon:'🩹'},
+ 'Bandage':{rarity:'common', icon:'🩹'},
+ 'Apple':{rarity:'common', icon:'🍎'},
+ 'Golden Apple':{rarity:'transcendent', icon:'🍏'},
+ 'Flopper':{rarity:'uncommon', icon:'🐟'},
+ 'Golden Truffle':{rarity:'mythic', icon:'🍄'},
+ '1-Up Token':{rarity:'legendary', icon:'⭐'},
+ 'Sonic Power Sneakers':{rarity:'epic', icon:'👟'}
 };
 
 const CUSTOM_ADJ = ['Vintage {T}','Luxury {T}','Limited-Edition {T}','Handcrafted {T}','Deluxe {T}','Rare {T}'];
@@ -1494,7 +1585,7 @@ const THEME_LEVEL = {
   movie:'medium',
   football:'deep',
   rivals_clasico:'deep', rivals_manchester:'deep', rivals_milan:'deep', rivals_london:'deep',
-  msvv:'easy'
+  msvv:'easy', fortnite:'medium'
 };
 const LEVEL_LABEL = { easy:'easy', medium:'some knowledge', deep:'deep cut' };
 function themeLevel(key){ return THEME_LEVEL[key] || 'medium'; }
@@ -1855,7 +1946,9 @@ const THEME_PACKS = [
   { key:'football', name:'Football',  emoji:'⚽', blurb:'squads & rivalries',
     themes:['football','rivals_clasico','rivals_manchester','rivals_milan','rivals_london','msvv'] },
   { key:'worlds',   name:'Big Ideas', emoji:'🏝️', blurb:'islands, houses, powers',
-    themes:['island','house','bedroom','world','superhero'] }
+    themes:['island','house','bedroom','world','superhero'] },
+  { key:'loadouts', name:'Game Loadouts', emoji:'🎮', blurb:'kit out an inventory',
+    themes:['fortnite'] }
 ];
 function allThemeMeta(key){
   if(CATEGORY_THEMES[key]) return CATEGORY_THEMES[key];
@@ -3207,6 +3300,8 @@ function playerCardHTML(nick, budget, items, opts){
   // at the results screen.
   const body = opts.pitchView
     ? `<div class="stall-pitch">${renderPitchSVG(items, !!opts.hideRating)}</div>`
+    : opts.loadoutView
+    ? `<div class="stall-loadout">${renderLoadoutHTML(items)}</div>`
     : (items.length
         ? items.map(it=>`<div class="item-row"><span class="iname">${it.cat?`<b>${escapeHtml(catShortLabel(opts.catThemeKey, it.cat))}:</b> `:''}${escapeHtml(it.name||'')}</span><span class="iprice">${it.paid===0?'FREE':(it.paid!=null?'$'+it.paid:'')}</span></div>`).join('')
         : `<div class="empty-note">Nothing yet</div>`);
@@ -3226,8 +3321,9 @@ function renderStalls(players, leadingIdx, turnIdx, catThemeKey, themeKey){
   // inconsistently) so this can't misfire either way.
   const wantsPitch = !CATEGORY_THEMES[themeKey] && themeUsesImmediatePlacement(themeKey);
   const hideR = wantsPitch && themeHidesRatings(themeKey);
+  const wantsLoadout = !CATEGORY_THEMES[themeKey] && themeWantsLoadout(themeKey);
   players.forEach((p,i)=>{
-    row.innerHTML += playerCardHTML(p.nick, p.budget, withPosChoices(p.items), {leading: leadingIdx===i, turnActive: turnIdx===i, catThemeKey, pitchView: wantsPitch, hideRating: hideR});
+    row.innerHTML += playerCardHTML(p.nick, p.budget, withPosChoices(p.items), {leading: leadingIdx===i, turnActive: turnIdx===i, catThemeKey, pitchView: wantsPitch, hideRating: hideR, loadoutView: wantsLoadout});
   });
 }
 
@@ -3706,6 +3802,7 @@ function resultViewFor(themeKey){
   // assignPositions theme's items already carry .cat — same pitch view as
   // the pre-slotted football draft, just with (possibly) hidden ratings.
   if(t && t.assignPositions) return 'pitch';
+  if(t && t.loadoutView) return 'loadout';
   return 'list';
 }
 function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
@@ -3737,6 +3834,14 @@ function renderResults(itemsArr, nicks, budgets, bidLog, resultView, opts){
       pitchWrap.appendChild(col);
     });
     $('pitches-wrap').appendChild(pitchWrap);
+  } else if(resultView==='loadout'){
+    const loadoutWrap = document.createElement('div'); loadoutWrap.className='pitch-wrap';
+    itemsArr.forEach((items,i)=>{
+      const col = document.createElement('div'); col.className='pitch-col';
+      col.innerHTML = `<div style="font-weight:700; font-size:12px; margin-bottom:4px;">${escapeHtml(nicks[i])}</div>` + renderLoadoutHTML(items);
+      loadoutWrap.appendChild(col);
+    });
+    $('pitches-wrap').appendChild(loadoutWrap);
   }
 
   const flavorWrap = $('flavor-wrap'); flavorWrap.innerHTML='';
@@ -3922,6 +4027,33 @@ function renderPitchSVG(items, hideRating){
   return svg;
 }
 
+/* ============ FORTNITE-STYLE LOADOUT SLOTS ============ */
+// A vertical 5-slot inventory, filled in the order each item is won — no
+// placement prompt (unlike MSVV's positions, there's nothing to choose),
+// just a colored border/fill per the item's real rarity tier.
+function fortniteMeta(name){ return (typeof FORTNITE_META !== 'undefined' && FORTNITE_META[name]) || null; }
+function renderLoadoutHTML(items){
+  const slots = (items||[]).slice(0,5);
+  let html = '<div class="loadout-col">';
+  for(let i=0;i<5;i++){
+    const it = slots[i];
+    if(it){
+      const meta = fortniteMeta(it.name);
+      const cls = meta ? 'rarity-'+meta.rarity : 'rarity-common';
+      const icon = meta ? meta.icon : '📦';
+      html += `<div class="loadout-slot ${cls}">
+        <span class="lo-icon">${icon}</span>
+        <span class="lo-name">${escapeHtml(it.name||'')}</span>
+        <span class="lo-price">${it.paid===0?'FREE':(it.paid!=null?'$'+it.paid:'')}</span>
+      </div>`;
+    } else {
+      html += `<div class="loadout-slot lo-empty"><span class="lo-icon">＋</span><span class="lo-name">Empty slot</span></div>`;
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
 /* ============ IMMEDIATE POSITION PLACEMENT (MSVV-style themes) ============ */
 // For flat (non-slotted) themes marked assignPositions:true, nobody's
 // position is pre-decided by the draft — the moment you win an item, you're
@@ -3935,6 +4067,10 @@ const POS_DEFAULT_5 = ['GK','DEF','MID','MID','ATT']; // a sensible 5-a-side sta
 // field two goalkeepers, so this caps what promptForPosition will accept.
 const POS_CAP = {GK:1, DEF:1, MID:2, ATT:1};
 function themeUsesImmediatePlacement(themeKey){ const t = THEMES[themeKey]; return !!(t && t.assignPositions); }
+// A flat theme can instead ask for a 5-slot inventory view (Fortnite-style)
+// rather than position placement — no choice to make, items just fill the
+// next open slot in the order they're won.
+function themeWantsLoadout(themeKey){ const t = THEMES[themeKey]; return !!(t && t.loadoutView); }
 // Most themes get 3 re-rolls on an uncontested item before the 4th attempt
 // just hands it over. A theme can override this (MSVV: 1) with maxSkips.
 function maxSkipsFor(themeKey){ const t = THEMES[themeKey]; return (t && t.maxSkips) || 3; }
@@ -4133,10 +4269,45 @@ $('btn-start-rematch').onclick = async ()=>{
   }catch(e){ alert('Could not start rematch: '+e.message); }
 };
 
+/* ============ ROOM COLOR THEMES (skins) ============ */
+// Purely cosmetic — swaps the CSS custom properties on <html> via
+// data-roomtheme, independent of the game THEMES/CATEGORY_THEMES above.
+// Persisted per-device so it isn't something you have to redo every visit.
+const ROOMTHEME_KEY = 'dr4fter_roomtheme';
+const ROOM_THEMES = [
+  { key:'default', name:'Draft Night', swatch:'#FF6A18' },
+  { key:'ocean',   name:'Ocean',       swatch:'#1FB6C9' },
+  { key:'sunset',  name:'Sunset',      swatch:'#FF5D62' },
+  { key:'forest',  name:'Forest',      swatch:'#6FCF52' },
+  { key:'mono',    name:'Mono',        swatch:'#F2F2F2' },
+  { key:'arcade',  name:'Arcade',      swatch:'#FF2FD0' }
+];
+function applyRoomTheme(key){
+  const valid = ROOM_THEMES.some(t=>t.key===key) ? key : 'default';
+  if(valid === 'default') document.documentElement.removeAttribute('data-roomtheme');
+  else document.documentElement.setAttribute('data-roomtheme', valid);
+  try{ localStorage.setItem(ROOMTHEME_KEY, valid); }catch(e){}
+  document.querySelectorAll('.roomtheme-dot').forEach(d=>d.classList.toggle('active', d.dataset.key===valid));
+}
+function renderRoomThemeRow(){
+  const row = $('roomtheme-row');
+  if(!row) return;
+  let saved = 'default';
+  try{ saved = localStorage.getItem(ROOMTHEME_KEY) || 'default'; }catch(e){}
+  row.innerHTML = ROOM_THEMES.map(t=>
+    `<button type="button" class="roomtheme-dot" data-key="${t.key}" title="${escapeHtml(t.name)}" style="background:${t.swatch};"></button>`
+  ).join('');
+  row.querySelectorAll('.roomtheme-dot').forEach(d=>{
+    d.onclick = ()=>{ sndClick(); applyRoomTheme(d.dataset.key); };
+  });
+  applyRoomTheme(saved);
+}
+
 /* ============ INIT ============ */
 $('btn-use-custom-space').onclick  = ()=>useCustomTheme('space');
 $('btn-use-custom-things').onclick = ()=>useCustomTheme('things');
 renderThemeGrid();
+renderRoomThemeRow();
 $('diff-slider').oninput = (e)=>{
   const idx = Math.max(0, Math.min(AI_LEVELS.length-1, Math.round(parseFloat(e.target.value))));
   const nextId = AI_LEVELS[idx].id;
